@@ -99,7 +99,9 @@ func (wd *Manager) newConsumer() error {
 }
 
 func (wd *Manager) consumeDeviceType(_ string, _ []byte, _ time.Time) error {
-	log.Println("Received device type update, updating consumer")
+	log.Println("Received device type update, updating consumer if needed")
+	log.Println("Waiting for topic adjustments....")
+	time.Sleep(5 * time.Second) // wait for topic adjustments
 	err := wd.newConsumer()
 	if err != nil {
 		return err
@@ -112,7 +114,7 @@ func (wd *Manager) errorhandlerDeviceType(err error, _ *consumer.Consumer) {
 	log.Println("ERROR consuming device type update: " + err.Error())
 }
 
-func (wd *Manager) consumeData(topic string, msg []byte, t time.Time) error {
+func (wd *Manager) consumeData(_ string, msg []byte, t time.Time) error {
 	m := map[string]interface{}{}
 	err := json.Unmarshal(msg, &m)
 	if err != nil {
