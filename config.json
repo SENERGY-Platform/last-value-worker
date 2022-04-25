@@ -1,0 +1,9 @@
+{
+  "memcached_urls": ["memcached-1", "memcached-2"],
+  "kafka_bootstrap": "127.0.0.1:9092",
+  "group_id": "last-value-worker",
+  "device_type_group_id": "last-value-worker-0",
+  "device_type_topic": "device-types",
+  "service_topic_prefix": "urn_infai_ses_service_",
+  "debug": false
+}
