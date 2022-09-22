@@ -182,7 +182,7 @@ func (wd *Manager) statsLogger() {
 func (wd *Manager) getTimestampFromMessage(message map[string]interface{}, serviceId string) (t *time.Time, err error) {
 	var service meta.Service
 	cachedItem, err := wd.mc.Get("service_" + service.Id)
-	if err == nil && cachedItem.Value != nil {
+	if err == nil {
 		err = json.Unmarshal(cachedItem.Value, &service)
 		if err != nil {
 			return nil, err
@@ -206,8 +206,7 @@ func (wd *Manager) getTimestampFromMessage(message map[string]interface{}, servi
 		if attr.Key == meta.TimeAttributeKey && len(attr.Value) > 0 {
 			cachedItem, err := wd.mc.Get("time_characteristic_id" + service.Id)
 			timeCharacteristicId := ""
-			if err != nil && cachedItem.Value != nil {
-				timeCharacteristicId = string(cachedItem.Value)
+			if err != nil {
 				pathParts := strings.Split(attr.Value, ".")
 				for _, output := range service.Outputs {
 					if output.ContentVariable.Name != pathParts[0] {
@@ -224,6 +223,8 @@ func (wd *Manager) getTimestampFromMessage(message map[string]interface{}, servi
 						Expiration: 5 * 60,
 					})
 				}
+			} else {
+				timeCharacteristicId = string(cachedItem.Value)
 			}
 			timeVal := getDeepValue(message, strings.Split(attr.Value, "."))
 			if timeVal == nil {
