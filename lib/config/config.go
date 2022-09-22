@@ -34,10 +34,11 @@ type Config struct {
 	DeviceTypeGroupId  string   `json:"device_type_group_id"`
 	DeviceTypeTopic    string   `json:"device_type_topic"`
 	ServiceTopicPrefix string   `json:"service_topic_prefix"`
+	DeviceRepoUrl      string   `json:"device_repo_url"`
 	Debug              bool     `json:"debug"`
 }
 
-//loads config from json in location and used environment variables (e.g ZookeeperUrl --> ZOOKEEPER_URL)
+// loads config from json in location and used environment variables (e.g ZookeeperUrl --> ZOOKEEPER_URL)
 func Load(location string) (config Config, err error) {
 	file, error := os.Open(location)
 	if error != nil {

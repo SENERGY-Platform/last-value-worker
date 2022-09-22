@@ -20,9 +20,12 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"github.com/SENERGY-Platform/converter/lib/converter"
+	"github.com/SENERGY-Platform/converter/lib/converter/characteristics"
 	"github.com/SENERGY-Platform/last-value-worker/lib/config"
 	"github.com/SENERGY-Platform/last-value-worker/lib/consumer"
 	kafkaAdmin "github.com/SENERGY-Platform/last-value-worker/lib/kafka-admin"
+	"github.com/SENERGY-Platform/last-value-worker/lib/meta"
 	"github.com/bradfitz/gomemcache/memcache"
 	"log"
 	"strconv"
@@ -40,6 +43,7 @@ type Manager struct {
 	wg                 *sync.WaitGroup
 	kafkaAdm           *kafkaAdmin.KafkaAdmin
 	mc                 *memcache.Client
+	conv               *converter.Converter
 
 	statsCounter uint64
 	statsMutex   sync.Mutex
@@ -49,11 +53,15 @@ func New(c *config.Config, ctx context.Context, wg *sync.WaitGroup) (*Manager, e
 	if c == nil || ctx == nil {
 		return nil, errors.New("nil argument")
 	}
+	conv, err := converter.New()
+	if err != nil {
+		return nil, err
+	}
 	kafkaAdm, err := kafkaAdmin.New(c)
 	if err != nil {
 		return nil, err
 	}
-	wd := &Manager{config: c, parentContext: ctx, kafkaAdm: kafkaAdm, wg: wg, mc: memcache.New(c.MemcachedUrls...)}
+	wd := &Manager{config: c, parentContext: ctx, kafkaAdm: kafkaAdm, wg: wg, mc: memcache.New(c.MemcachedUrls...), conv: conv}
 	err = wd.start()
 	if err != nil {
 		return nil, err
@@ -132,8 +140,15 @@ func (wd *Manager) consumeData(_ string, msg []byte, t time.Time) error {
 	if !ok {
 		return errors.New("unfamiliar message format: missing service_id")
 	}
+	tOverride, err := wd.getTimestampFromMessage(value.(map[string]interface{}), serviceId)
+	if err != nil {
+		return err
+	}
+	if tOverride != nil {
+		t = *tOverride
+	}
 	v := map[string]interface{}{
-		"time":  t.Format(time.RFC3339Nano),
+		"time":  t.UTC().Format(time.RFC3339Nano),
 		"value": value,
 	}
 	bytes, err := json.Marshal(v)
@@ -164,6 +179,67 @@ func (wd *Manager) statsLogger() {
 	}
 }
 
+func (wd *Manager) getTimestampFromMessage(message map[string]interface{}, serviceId string) (t *time.Time, err error) {
+	var service meta.Service
+	cachedItem, err := wd.mc.Get("service_" + service.Id)
+	if err == nil {
+		err = json.Unmarshal(cachedItem.Value, &service)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		service, err = meta.GetService(serviceId, wd.config.DeviceRepoUrl)
+		if err != nil {
+			return nil, err
+		}
+		bytes, err := json.Marshal(service)
+		if err != nil {
+			return nil, err
+		}
+		_ = wd.mc.Set(&memcache.Item{
+			Key:        "service_" + service.Id,
+			Value:      bytes,
+			Expiration: 5 * 60,
+		})
+	}
+	for _, attr := range service.Attributes {
+		if attr.Key == meta.TimeAttributeKey && len(attr.Value) > 0 {
+			cachedItem, err := wd.mc.Get("time_characteristic_id" + service.Id)
+			timeCharacteristicId := ""
+			if err != nil {
+				timeCharacteristicId = string(cachedItem.Value)
+				pathParts := strings.Split(attr.Value, ".")
+				for _, output := range service.Outputs {
+					if output.ContentVariable.Name != pathParts[0] {
+						continue
+					}
+					timeContentVariable := getDeepContentVariable(output.ContentVariable, pathParts[1:])
+					if timeContentVariable == nil {
+						return nil, errors.New("Can't find content variable with path " + attr.Value)
+					}
+					timeCharacteristicId = timeContentVariable.CharacteristicId
+					_ = wd.mc.Set(&memcache.Item{
+						Key:        "time_characteristic_id" + serviceId,
+						Value:      []byte(timeCharacteristicId),
+						Expiration: 5 * 60,
+					})
+				}
+			}
+			timeVal := getDeepValue(message, strings.Split(attr.Value, "."))
+			if timeVal == nil {
+				return nil, errors.New("Can't find value with path " + attr.Value + " in message")
+			}
+			timeVal, err = wd.conv.Cast(timeVal, timeCharacteristicId, characteristics.UnixNanoSeconds)
+			if err != nil {
+				return nil, err
+			}
+			t := time.Unix(0, timeVal.(int64))
+			return &t, nil
+		}
+	}
+	return nil, nil
+}
+
 func equalStringSlice(a []string, b []string) bool {
 	if a == nil || b == nil {
 		return a == nil && b == nil
@@ -186,4 +262,34 @@ func elemInSlice(elem string, slice []string) bool {
 		}
 	}
 	return false
+}
+
+func getDeepContentVariable(root meta.ContentVariable, path []string) *meta.ContentVariable {
+	if len(path) == 0 {
+		return &root
+	}
+	if root.SubContentVariables == nil {
+		return nil
+	}
+	for _, sub := range root.SubContentVariables {
+		if sub.Name == path[0] {
+			return getDeepContentVariable(sub, path[1:])
+		}
+	}
+	return nil
+}
+
+func getDeepValue(root interface{}, path []string) interface{} {
+	if len(path) == 0 {
+		return root
+	}
+	rootM, ok := root.(map[string]interface{})
+	if !ok {
+		return nil
+	}
+	sub, ok := rootM[path[0]]
+	if !ok {
+		return nil
+	}
+	return getDeepValue(sub, path[1:])
 }
