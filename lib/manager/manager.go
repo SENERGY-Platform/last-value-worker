@@ -181,7 +181,7 @@ func (wd *Manager) statsLogger() {
 
 func (wd *Manager) getTimestampFromMessage(message map[string]interface{}, serviceId string) (t *time.Time, err error) {
 	var service meta.Service
-	cachedItem, err := wd.mc.Get("service_" + service.Id)
+	cachedItem, err := wd.mc.Get("service_" + serviceId)
 	if err == nil {
 		err = json.Unmarshal(cachedItem.Value, &service)
 		if err != nil {
