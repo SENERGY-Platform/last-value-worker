@@ -174,7 +174,12 @@ func (publisher *Publisher) Publish(mixedEnvelopes []meta.Envelope, mixedTimesta
 		query += strings.Join(fieldNames, "\", \"") + "\") VALUES " + strings.Join(rows, ", ") + ";"
 		_, err = publisher.db.Exec(context.Background(), query)
 		if err != nil {
-			return err
+			if strings.Contains(err.Error(), "SQLSTATE 42P01") {
+				log.Println("WARNING: " + err.Error() + "; Device deleted?")
+				err = nil
+			} else {
+				return err
+			}
 		}
 		if publisher.debug {
 			log.Println("Postgres publishing took ", time.Since(start))
