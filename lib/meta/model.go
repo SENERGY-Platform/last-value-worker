@@ -77,3 +77,19 @@ type ContentVariable struct {
 	SerializationOptions []string          `json:"serialization_options"`
 	UnitReference        string            `json:"unit_reference,omitempty"`
 }
+
+type Envelope struct {
+	DeviceId  string                 `json:"device_id,omitempty"`
+	ServiceId string                 `json:"service_id,omitempty"`
+	Value     map[string]interface{} `json:"value"`
+}
+
+const (
+	String  Type = "https://schema.org/Text"
+	Integer Type = "https://schema.org/Integer"
+	Float   Type = "https://schema.org/Float"
+	Boolean Type = "https://schema.org/Boolean"
+
+	List      Type = "https://schema.org/ItemList"
+	Structure Type = "https://schema.org/StructuredValue"
+)

@@ -20,6 +20,7 @@ import (
 	"context"
 	"github.com/Shopify/sarama"
 	"log"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -28,11 +29,13 @@ import (
 const Latest = sarama.OffsetNewest
 const Earliest = sarama.OffsetOldest
 
-func NewConsumer(ctx context.Context, wg *sync.WaitGroup, kafkaBootstrap string, topics []string, groupId string, offset int64, listener func(topic string, msg []byte, time time.Time) error, errorhandler func(err error, consumer *Consumer), debug bool) (consumer *Consumer, err error) {
-	consumer = &Consumer{ctx: ctx, wg: wg, kafkaBootstrap: kafkaBootstrap, topics: topics, listener: listener, errorhandler: errorhandler, offset: offset, ready: make(chan bool), groupId: groupId, debug: debug}
+func NewConsumer(ctx context.Context, wg *sync.WaitGroup, kafkaBootstrap string, topics []string, groupId string, offset int64, listener func(topic string, msgs []*sarama.ConsumerMessage) error, errorhandler func(err error, consumer *Consumer), debug bool) (consumer *Consumer, err error) {
+	consumer = &Consumer{ctx: ctx, wg: wg, kafkaBootstrap: kafkaBootstrap, topics: topics, listener: listener, errorhandler: errorhandler, offset: offset, ready: make(chan bool), groupId: groupId, internalWg: &sync.WaitGroup{}, debug: debug}
 	err = consumer.start()
 	return
 }
+
+const a = time.Millisecond
 
 type Consumer struct {
 	count          int
@@ -40,7 +43,8 @@ type Consumer struct {
 	topics         []string
 	ctx            context.Context
 	wg             *sync.WaitGroup
-	listener       func(topic string, msg []byte, time time.Time) error
+	internalWg     *sync.WaitGroup
+	listener       func(topic string, msgs []*sarama.ConsumerMessage) error
 	errorhandler   func(err error, consumer *Consumer)
 	mux            sync.Mutex
 	offset         int64
@@ -57,6 +61,7 @@ func (this *Consumer) start() error {
 	config := sarama.NewConfig()
 	config.Consumer.Offsets.Initial = this.offset
 	config.Consumer.Group.Rebalance.Strategy = sarama.BalanceStrategySticky
+	config.ChannelBufferSize = 65536
 
 	client, err := sarama.NewConsumerGroup(strings.Split(this.kafkaBootstrap, ","), this.groupId, config)
 	if err != nil {
@@ -97,29 +102,77 @@ func (this *Consumer) Setup(sarama.ConsumerGroupSession) error {
 
 // Cleanup is run at the end of a session, once all ConsumeClaim goroutines have exited
 func (this *Consumer) Cleanup(sarama.ConsumerGroupSession) error {
-	log.Println("Cleaned up kafka session")
+	log.Println("Cleaning up kafka session " + this.groupId)
+	this.internalWg.Wait()
+	log.Println("Cleaned up kafka session " + this.groupId)
 	this.wg.Done()
 	return nil
 }
 
 // ConsumeClaim must start a consumer loop of ConsumerGroupClaim's Messages().
 func (this *Consumer) ConsumeClaim(session sarama.ConsumerGroupSession, claim sarama.ConsumerGroupClaim) error {
-	for message := range claim.Messages() {
-		select {
-		case <-this.ctx.Done():
-			log.Println("Ignoring queued kafka messages for faster shutdown")
-			return nil
-		default:
-			if this.debug {
-				log.Println(message.Topic, message.Timestamp, string(message.Value))
-			}
-			err := this.listener(message.Topic, message.Value, message.Timestamp)
-			if err != nil {
-				this.errorhandler(err, this)
-			}
-			session.MarkMessage(message, "")
+	msgsChannel := claim.Messages()
+	done := this.ctx.Done()
+	var message *sarama.ConsumerMessage
+	var open bool
+	topicMsgs := make(map[string][]*sarama.ConsumerMessage)
+
+	queueMsg := func(message *sarama.ConsumerMessage) {
+		arr, ok := topicMsgs[message.Topic]
+		if !ok {
+			arr = []*sarama.ConsumerMessage{}
 		}
+		arr = append(arr, message)
+		topicMsgs[message.Topic] = arr
 	}
 
-	return nil
+	handleQueuedMsgs := func() {
+		this.internalWg.Add(1)
+		wg := &sync.WaitGroup{}
+		wg.Add(len(topicMsgs))
+		for topic, msgs := range topicMsgs {
+			topic := topic
+			msgs := msgs
+			if this.debug {
+				log.Println("Got " + strconv.Itoa(len(msgs)) + " from topic " + topic)
+			}
+			go func() {
+				err := this.listener(topic, msgs)
+				if err != nil {
+					this.errorhandler(err, this)
+				}
+				wg.Done()
+			}()
+		}
+		wg.Wait()
+		if message != nil {
+			session.MarkMessage(message, "")
+			message = nil
+		}
+		topicMsgs = make(map[string][]*sarama.ConsumerMessage)
+		this.internalWg.Done()
+	}
+
+	defer handleQueuedMsgs()
+
+	for {
+		select {
+		case <-done:
+			return nil
+		case message, open = <-msgsChannel:
+			if !open {
+				return nil
+			}
+
+			queueMsg(message)
+			for i := len(msgsChannel); i > 0; i-- {
+				message, open = <-msgsChannel
+				if !open {
+					return nil
+				}
+				queueMsg(message)
+			}
+			handleQueuedMsgs()
+		}
+	}
 }

@@ -35,6 +35,11 @@ type Config struct {
 	DeviceTypeTopic    string   `json:"device_type_topic"`
 	ServiceTopicPrefix string   `json:"service_topic_prefix"`
 	DeviceRepoUrl      string   `json:"device_repo_url"`
+	PostgresHost       string   `json:"postgres_host"`
+	PostgresPort       int      `json:"postgres_port"`
+	PostgresUser       string   `json:"postgres_user"`
+	PostgresPw         string   `json:"postgres_pw"`
+	PostgresDb         string   `json:"postgres_db"`
 	Debug              bool     `json:"debug"`
 }
 
