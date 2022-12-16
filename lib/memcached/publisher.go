@@ -49,7 +49,7 @@ func (this *Memcached) Publish(envelopes []meta.Envelope, timestamps []time.Time
 			return
 		}
 		sErr = this.mc.Set(&memcache.Item{
-			Key:        "device_" + envelopes[i].DeviceId + "_service_" + envelopes[i].ServiceId,
+			Key:        "device_" + envelopes[i].DeviceId[:57] + "_service_" + envelopes[i].ServiceId,
 			Value:      bytes,
 			Expiration: 0, // no expiration
 		})

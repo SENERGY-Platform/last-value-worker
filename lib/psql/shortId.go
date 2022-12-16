@@ -24,7 +24,7 @@ import (
 
 func ShortenId(uuid string) (string, error) {
 	parts := strings.Split(uuid, ":")
-	noPrefix := parts[len(parts)-1]
+	noPrefix := parts[len(parts)-1][:36]
 	noPrefix = strings.ReplaceAll(noPrefix, "-", "")
 	bytes, err := hex.DecodeString(noPrefix)
 	if err != nil {
