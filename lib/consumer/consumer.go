@@ -23,19 +23,16 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"time"
 )
 
 const Latest = sarama.OffsetNewest
 const Earliest = sarama.OffsetOldest
 
-func NewConsumer(ctx context.Context, wg *sync.WaitGroup, kafkaBootstrap string, topics []string, groupId string, offset int64, listener func(topic string, msgs []*sarama.ConsumerMessage) error, errorhandler func(err error, consumer *Consumer), debug bool) (consumer *Consumer, err error) {
+func NewConsumer(ctx context.Context, wg *sync.WaitGroup, kafkaBootstrap string, topics []string, groupId string, offset int64, listener func(topic string, msgs []*sarama.ConsumerMessage) error, errorhandler func(err error, consumer *Consumer, topic string), debug bool) (consumer *Consumer, err error) {
 	consumer = &Consumer{ctx: ctx, wg: wg, kafkaBootstrap: kafkaBootstrap, topics: topics, listener: listener, errorhandler: errorhandler, offset: offset, ready: make(chan bool), groupId: groupId, internalWg: &sync.WaitGroup{}, debug: debug}
 	err = consumer.start()
 	return
 }
-
-const a = time.Millisecond
 
 type Consumer struct {
 	count          int
@@ -45,7 +42,7 @@ type Consumer struct {
 	wg             *sync.WaitGroup
 	internalWg     *sync.WaitGroup
 	listener       func(topic string, msgs []*sarama.ConsumerMessage) error
-	errorhandler   func(err error, consumer *Consumer)
+	errorhandler   func(err error, consumer *Consumer, topic string)
 	mux            sync.Mutex
 	offset         int64
 	groupId        string
@@ -139,7 +136,7 @@ func (this *Consumer) ConsumeClaim(session sarama.ConsumerGroupSession, claim sa
 			go func() {
 				err := this.listener(topic, msgs)
 				if err != nil {
-					this.errorhandler(err, this)
+					this.errorhandler(err, this, topic)
 				}
 				wg.Done()
 			}()

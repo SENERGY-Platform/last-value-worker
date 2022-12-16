@@ -123,7 +123,7 @@ func (wd *Manager) consumeDeviceType(_ string, _ []*sarama.ConsumerMessage) erro
 	return nil
 }
 
-func (wd *Manager) errorhandlerDeviceType(err error, _ *consumer.Consumer) {
+func (wd *Manager) errorhandlerDeviceType(err error, _ *consumer.Consumer, _ string) {
 	log.Println("ERROR consuming device type update: " + err.Error())
 }
 
@@ -178,8 +178,8 @@ func (wd *Manager) consumeData(_ string, msgs []*sarama.ConsumerMessage) error {
 	return nil
 }
 
-func (wd *Manager) errorhandlerData(err error, _ *consumer.Consumer) {
-	log.Fatalln("ERROR consuming data: " + err.Error())
+func (wd *Manager) errorhandlerData(err error, _ *consumer.Consumer, topic string) {
+	log.Fatalln("ERROR consuming data from topic " + topic + " : " + err.Error())
 }
 
 func (wd *Manager) statsLogger() {
