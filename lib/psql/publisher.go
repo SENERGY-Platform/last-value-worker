@@ -165,7 +165,7 @@ func (publisher *Publisher) Publish(mixedEnvelopes []meta.Envelope, mixedTimesta
 					if !ok || v == nil {
 						values[j] = "NULL"
 					} else {
-						values[j] = fmt.Sprintf("%v", v)
+						values[j] = strings.ReplaceAll(fmt.Sprintf("%v", v), "\u0000", "")
 					}
 				}
 			}
