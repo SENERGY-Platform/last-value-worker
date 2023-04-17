@@ -20,6 +20,7 @@ import (
 	"github.com/SENERGY-Platform/converter/lib/converter"
 	"github.com/SENERGY-Platform/last-value-worker/lib/config"
 	"github.com/bradfitz/gomemcache/memcache"
+	"time"
 )
 
 type Memcached struct {
@@ -33,6 +34,9 @@ func New(c *config.Config) (*Memcached, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Memcached{mc: memcache.New(c.MemcachedUrls...), conv: conv, config: c}, nil
+	mc := memcache.New(c.MemcachedUrls...)
+	mc.MaxIdleConns = 100
+	mc.Timeout = time.Second
+	return &Memcached{mc: mc, conv: conv, config: c}, nil
 
 }
