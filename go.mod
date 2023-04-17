@@ -1,6 +1,6 @@
 module github.com/SENERGY-Platform/last-value-worker
 
-go 1.17
+go 1.20
 
 require (
 	github.com/SENERGY-Platform/converter v0.0.0-20220810123448-27fbbf6ab679
