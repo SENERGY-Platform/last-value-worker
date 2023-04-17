@@ -18,6 +18,7 @@ package psql
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/SENERGY-Platform/converter/lib/converter"
 	"github.com/SENERGY-Platform/last-value-worker/lib/memcached"
@@ -178,6 +179,7 @@ func (publisher *Publisher) Publish(mixedEnvelopes []meta.Envelope, mixedTimesta
 				log.Println("WARNING: " + err.Error() + "; Device deleted?")
 				err = nil
 			} else {
+				err = errors.Join(errors.New(query), err)
 				return err
 			}
 		}
