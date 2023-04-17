@@ -132,7 +132,8 @@ func (wd *Manager) consumeData(_ string, msgs []*sarama.ConsumerMessage) error {
 	timestamps := make([]time.Time, len(msgs))
 	for i, msg := range msgs {
 		var envelope meta.Envelope
-		err := json.Unmarshal(msg.Value, &envelope)
+		msgValue := strings.ReplaceAll(string(msg.Value), "\u0000", "")
+		err := json.Unmarshal([]byte(msgValue), &envelope)
 		if err != nil {
 			return err
 		}
