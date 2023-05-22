@@ -27,8 +27,9 @@ import (
 	"github.com/SENERGY-Platform/last-value-worker/lib/meta"
 	"github.com/SENERGY-Platform/last-value-worker/lib/psql"
 	"github.com/Shopify/sarama"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	"log"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -44,10 +45,12 @@ type Manager struct {
 	kafkaAdm           *kafkaAdmin.KafkaAdmin
 	memcached          *memcached.Memcached
 	psqlPublisher      *psql.Publisher
-
-	statsCounter uint64
-	statsMutex   sync.Mutex
 }
+
+var writtenCounter = promauto.NewCounter(prometheus.CounterOpts{
+	Name: "last_value_worker_written",
+	Help: "Number of values the worker has written",
+})
 
 func New(c *config.Config, ctx context.Context, wg *sync.WaitGroup) (*Manager, error) {
 	if c == nil || ctx == nil {
@@ -81,7 +84,6 @@ func (wd *Manager) start() error {
 	}
 	wd.deviceTypeConsumer, err = consumer.NewConsumer(wd.parentContext, wd.wg, wd.config.KafkaBootstrap, []string{wd.config.DeviceTypeTopic},
 		wd.config.DeviceTypeGroupId, consumer.Latest, wd.consumeDeviceType, wd.errorhandlerDeviceType, wd.config.Debug)
-	go wd.statsLogger()
 	return err
 }
 
@@ -171,23 +173,10 @@ func (wd *Manager) consumeData(_ string, msgs []*sarama.ConsumerMessage) error {
 		return err
 	}
 
-	wd.statsMutex.Lock()
-	wd.statsCounter += uint64(len(envelopes))
-	wd.statsMutex.Unlock()
-
+	writtenCounter.Add(float64(len(envelopes)))
 	return nil
 }
 
 func (wd *Manager) errorhandlerData(err error, _ *consumer.Consumer, topic string) {
 	log.Fatalln("ERROR consuming data from topic " + topic + " : " + err.Error())
-}
-
-func (wd *Manager) statsLogger() {
-	for {
-		time.Sleep(time.Minute)
-		wd.statsMutex.Lock()
-		log.Println("STATS Wrote " + strconv.FormatUint(wd.statsCounter, 10) + " entries in the last minute")
-		wd.statsCounter = 0
-		wd.statsMutex.Unlock()
-	}
 }
