@@ -142,7 +142,7 @@ func (publisher *Publisher) Publish(mixedEnvelopes []meta.Envelope, mixedTimesta
 			return err
 		}
 		table := "device:" + shortDeviceId + "_" + "service:" + shortServiceId
-		rows := make([]string, len(envelopes))
+		rows := []string{}
 		for i, envelope := range envelopes {
 			values := make([]string, len(fieldNames))
 			m := flatten(envelope.Value)
@@ -151,7 +151,8 @@ func (publisher *Publisher) Publish(mixedEnvelopes []meta.Envelope, mixedTimesta
 
 			tOverride, err := publisher.memcached.GetTimestampFromMessage(envelopes[i].Value, service)
 			if err != nil {
-				return err
+				log.Println("WARN: Could not get timestamp, message ignored! " + err.Error())
+				continue
 			}
 			if tOverride != nil {
 				t = *tOverride
@@ -169,7 +170,10 @@ func (publisher *Publisher) Publish(mixedEnvelopes []meta.Envelope, mixedTimesta
 					}
 				}
 			}
-			rows[i] = "(" + strings.Join(values, ", ") + ")"
+			rows = append(rows, "("+strings.Join(values, ", ")+")")
+		}
+		if len(rows) == 0 {
+			return nil
 		}
 		query := "INSERT INTO \"" + table + "\" (\""
 		query += strings.Join(fieldNames, "\", \"") + "\") VALUES " + strings.Join(rows, ", ") + ";"
