@@ -23,6 +23,7 @@ import (
 	"github.com/SENERGY-Platform/last-value-worker/lib/meta"
 	"github.com/bradfitz/gomemcache/memcache"
 	"log"
+	"net/http"
 	"strings"
 	"time"
 )
@@ -70,21 +71,21 @@ func (this *Memcached) GetTimestampFromMessage(message map[string]interface{}, s
 	return nil, nil
 }
 
-func (this *Memcached) GetService(serviceId string) (service meta.Service, err error) {
+func (this *Memcached) GetService(serviceId string) (service meta.Service, code int, err error) {
 	cachedItem, err := this.mc.Get("service_" + serviceId)
 	if err == nil {
 		err = json.Unmarshal(cachedItem.Value, &service)
 		if err != nil {
-			return service, err
+			return service, http.StatusInternalServerError, err
 		}
 	} else {
-		service, err = meta.GetService(serviceId, this.config.DeviceRepoUrl)
+		service, code, err = meta.GetService(serviceId, this.config.DeviceRepoUrl)
 		if err != nil {
-			return service, err
+			return service, code, err
 		}
 		bytes, err := json.Marshal(service)
 		if err != nil {
-			return service, err
+			return service, http.StatusInternalServerError, err
 		}
 		err = this.mc.Set(&memcache.Item{
 			Key:        "service_" + service.Id,
@@ -96,5 +97,5 @@ func (this *Memcached) GetService(serviceId string) (service meta.Service, err e
 			err = nil
 		}
 	}
-	return service, err
+	return service, http.StatusOK, err
 }

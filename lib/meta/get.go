@@ -23,23 +23,23 @@ import (
 	"strconv"
 )
 
-func GetService(id string, url string) (Service, error) {
+func GetService(id string, url string) (Service, int, error) {
 	url += "/services/" + id
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		return Service{}, err
+		return Service{}, http.StatusInternalServerError, err
 	}
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return Service{}, err
+		return Service{}, http.StatusInternalServerError, err
 	}
 	if resp.StatusCode != http.StatusOK {
-		return Service{}, errors.New("unexpected status code while getting service: " + strconv.Itoa(resp.StatusCode) + ", URL was " + url)
+		return Service{}, resp.StatusCode, errors.New("unexpected status code while getting service: " + strconv.Itoa(resp.StatusCode) + ", URL was " + url)
 	}
 	var service Service
 	err = json.NewDecoder(resp.Body).Decode(&service)
 	if err != nil {
-		return Service{}, err
+		return Service{}, http.StatusInternalServerError, err
 	}
-	return service, nil
+	return service, http.StatusOK, nil
 }

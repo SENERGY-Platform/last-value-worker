@@ -30,6 +30,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"log"
+	"net/http"
 	"strings"
 	"sync"
 	"time"
@@ -144,8 +145,12 @@ func (wd *Manager) consumeData(_ string, msgs []*sarama.ConsumerMessage) error {
 	if len(envelopes) == 0 {
 		return nil
 	}
-	service, err := wd.memcached.GetService(envelopes[0].ServiceId)
+	service, code, err := wd.memcached.GetService(envelopes[0].ServiceId)
 	if err != nil {
+		if code == http.StatusNotFound {
+			log.Println("WARN: Service " + envelopes[0].ServiceId + " not found, ignoring messages!")
+			return nil
+		}
 		return err
 	}
 
