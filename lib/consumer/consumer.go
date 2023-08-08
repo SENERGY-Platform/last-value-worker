@@ -60,8 +60,8 @@ func (this *Consumer) start() error {
 	config.Consumer.Offsets.Initial = this.offset
 	config.Consumer.Group.Rebalance.Strategy = sarama.BalanceStrategySticky
 	config.ChannelBufferSize = 65536
-	config.Net.ReadTimeout = 60 * time.Second
-	config.Net.WriteTimeout = 60 * time.Second
+	config.Net.ReadTimeout = 120 * time.Second
+	config.Net.WriteTimeout = 120 * time.Second
 
 	client, err := sarama.NewConsumerGroup(strings.Split(this.kafkaBootstrap, ","), this.groupId, config)
 	if err != nil {
