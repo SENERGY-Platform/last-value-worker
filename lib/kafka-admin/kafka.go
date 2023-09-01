@@ -17,8 +17,8 @@
 package kafkaAdmin
 
 import (
+	"github.com/IBM/sarama"
 	"github.com/SENERGY-Platform/last-value-worker/lib/config"
-	"github.com/Shopify/sarama"
 )
 
 type KafkaAdmin struct {
