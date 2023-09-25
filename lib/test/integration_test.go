@@ -21,6 +21,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/IBM/sarama"
 	"github.com/SENERGY-Platform/converter/lib/converter/characteristics"
 	"github.com/SENERGY-Platform/last-value-worker/lib"
@@ -30,8 +31,13 @@ import (
 	"github.com/SENERGY-Platform/last-value-worker/lib/test/mock/iot"
 	"github.com/SENERGY-Platform/models/go/models"
 	"github.com/bradfitz/gomemcache/memcache"
+	"io"
+	"net"
 	"net/http"
+	"net/http/httptest"
 	"net/url"
+	"reflect"
+	"runtime/debug"
 	"strings"
 	"sync"
 	"testing"
@@ -64,25 +70,45 @@ func TestIntegration(t *testing.T) {
 		return
 	}
 
-	conf.DeviceRepoUrl, err = iot.Mock(ctx, conf.KafkaBootstrap)
-	if err != nil {
-		t.Error(err)
-		return
-	}
-
 	conf.PostgresHost, conf.PostgresPort, conf.PostgresUser, conf.PostgresPw, conf.PostgresDb, err = docker.Timescale(ctx, wg)
 	if err != nil {
 		t.Error(err)
 		return
 	}
 
-	parsedDeviceRepoUrl, err := url.Parse(conf.DeviceRepoUrl)
+	hostIp, err := docker.GetHostIp(ctx)
 	if err != nil {
 		t.Error(err)
 		return
 	}
 
-	hostIp, err := docker.GetHostIp(ctx)
+	permMockServ := &httptest.Server{
+		Config: &http.Server{Handler: http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+			json.NewEncoder(writer).Encode(true)
+		})},
+	}
+	permMockServ.Listener, err = net.Listen("tcp", ":")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	permMockServ.Start()
+	defer permMockServ.Close()
+
+	parsedPermSearchUrl, err := url.Parse(permMockServ.URL)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	permSearchMockUrl := "http://" + hostIp + ":" + parsedPermSearchUrl.Port()
+
+	conf.DeviceRepoUrl, err = iot.Mock(ctx, conf.KafkaBootstrap)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	parsedDeviceRepoUrl, err := url.Parse(conf.DeviceRepoUrl)
 	if err != nil {
 		t.Error(err)
 		return
@@ -102,6 +128,12 @@ func TestIntegration(t *testing.T) {
 		return
 	}
 	conf.MemcachedUrls = []string{cacheIp + ":11211"}
+
+	timescaleWrapperUrl, err := docker.Timescalewrapper(ctx, wg, conf.PostgresHost, conf.PostgresPort, conf.PostgresUser, conf.PostgresPw, conf.PostgresDb, dockerDeviceRepoUrl, permSearchMockUrl, "", conf.MemcachedUrls)
+	if err != nil {
+		t.Error(err)
+		return
+	}
 
 	_, err = lib.Start(conf, ctx)
 	if err != nil {
@@ -247,7 +279,67 @@ func TestIntegration(t *testing.T) {
 		t.Error(string(item.Value))
 	}
 
-	//TODO: check postgres
+	lastValueResp, err := lastValueQuery(timescaleWrapperUrl, []map[string]interface{}{
+		{
+			"columnName": "metrics.level",
+			"deviceId":   d.Id,
+			"serviceId":  dt.Services[0].Id,
+		},
+		{
+			"columnName": "other_var",
+			"deviceId":   d.Id,
+			"serviceId":  dt.Services[0].Id,
+		},
+	})
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	if !reflect.DeepEqual(normalizeLastValueResp(lastValueResp), normalizeLastValueResp([]map[string]interface{}{{"value": 42.0}, {"value": "foo"}})) {
+		t.Errorf("%#v", lastValueResp)
+		return
+	}
+
+}
+
+func normalizeLastValueResp(in []map[string]interface{}) (out []map[string]interface{}) {
+	for _, v := range in {
+		v["time"] = ""
+		out = append(out, v)
+	}
+	return out
+}
+
+func lastValueQuery(timescaleWrapperUrl string, query []map[string]interface{}) (result []map[string]interface{}, err error) {
+	b := new(bytes.Buffer)
+	err = json.NewEncoder(b).Encode(query)
+	if err != nil {
+		return result, err
+	}
+	req, err := http.NewRequest("POST", timescaleWrapperUrl+"/last-values", b)
+	if err != nil {
+		return result, err
+	}
+
+	token := "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c"
+	req.Header.Set("Authorization", token)
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		debug.PrintStack()
+		return result, err
+	}
+	if resp.StatusCode >= 300 {
+		temp, _ := io.ReadAll(resp.Body)
+		return result, errors.New(fmt.Sprintf("unexpected status-code: %v, %v", resp.StatusCode, string(temp)))
+	}
+	err = json.NewDecoder(resp.Body).Decode(&result)
+	if err != nil {
+		debug.PrintStack()
+		return result, err
+	}
+	return result, err
 }
 
 func createDeviceType(conf config.Config, deviceType models.DeviceType) (err error) {
