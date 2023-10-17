@@ -182,6 +182,9 @@ func (publisher *Publisher) Publish(mixedEnvelopes []meta.Envelope, mixedTimesta
 			if strings.Contains(err.Error(), "SQLSTATE 42P01") {
 				log.Println("WARNING: " + err.Error() + "; Device deleted?")
 				err = nil
+			} else if strings.Contains(err.Error(), "SQLSTATE 42703") {
+				log.Println("WARNING: " + err.Error() + "; Device message outdated?")
+				err = nil
 			} else {
 				err = errors.Join(errors.New(query), err)
 				return err
