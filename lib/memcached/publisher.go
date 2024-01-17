@@ -24,10 +24,11 @@ import (
 	"time"
 )
 
-func (this *Memcached) Publish(envelopes []meta.Envelope, timestamps []time.Time, service meta.Service) (err error) {
+func (this *Memcached) Publish(envelopes []meta.Envelope, timestamps []time.Time, service meta.Service) (sizes []int, err error) {
 	if len(envelopes) != len(timestamps) {
 		log.Fatalln("FATAL: Expect same length envelopes and timestamps")
 	}
+	sizes = make([]int, len(envelopes))
 	start := time.Now()
 	for i := range envelopes {
 		t := timestamps[i]
@@ -48,6 +49,7 @@ func (this *Memcached) Publish(envelopes []meta.Envelope, timestamps []time.Time
 			err = sErr
 			return
 		}
+		sizes[i] = len(bytes)
 		sErr = this.mc.Set(&memcache.Item{
 			Key:        "device_" + envelopes[i].DeviceId[:57] + "_service_" + envelopes[i].ServiceId,
 			Value:      bytes,
@@ -61,5 +63,5 @@ func (this *Memcached) Publish(envelopes []meta.Envelope, timestamps []time.Time
 		log.Println("Memcached publishing took ", time.Since(start))
 	}
 
-	return err
+	return sizes, err
 }

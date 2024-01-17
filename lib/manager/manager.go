@@ -53,6 +53,18 @@ var writtenCounter = promauto.NewCounter(prometheus.CounterOpts{
 	Help: "Number of values the worker has written",
 })
 
+var writtenCounterDevices = promauto.NewCounterVec(prometheus.CounterOpts{
+	Name: "last_value_worker_written_device_messages",
+	Help: "Number of device messages the worker has written",
+},
+	[]string{"device_id"})
+
+var writtenBytesCounterDevices = promauto.NewCounterVec(prometheus.CounterOpts{
+	Name: "last_value_worker_written_device_bytes",
+	Help: "Size of device messages the worker has written",
+},
+	[]string{"device_id"})
+
 func New(c *config.Config, ctx context.Context, wg *sync.WaitGroup) (*Manager, error) {
 	if c == nil || ctx == nil {
 		return nil, errors.New("nil argument")
@@ -165,9 +177,12 @@ func (wd *Manager) consumeData(_ string, msgs []*sarama.ConsumerMessage) error {
 		}
 	}()
 
+	var sizes []int
+
 	go func() {
 		defer wg.Done()
-		sErr := wd.memcached.Publish(envelopes, timestamps, service)
+		var sErr error
+		sizes, sErr = wd.memcached.Publish(envelopes, timestamps, service)
 		if sErr != nil {
 			err = sErr
 		}
@@ -178,10 +193,19 @@ func (wd *Manager) consumeData(_ string, msgs []*sarama.ConsumerMessage) error {
 		return err
 	}
 
-	writtenCounter.Add(float64(len(envelopes)))
+	go collectMetrics(envelopes, sizes)
 	return nil
 }
 
 func (wd *Manager) errorhandlerData(err error, _ *consumer.Consumer, topic string) {
 	log.Fatalln("ERROR consuming data from topic " + topic + " : " + err.Error())
+}
+
+func collectMetrics(envelopes []meta.Envelope, sizes []int) {
+	writtenCounter.Add(float64(len(envelopes)))
+
+	for i, envelope := range envelopes {
+		writtenCounterDevices.WithLabelValues(envelope.DeviceId).Add(1)
+		writtenBytesCounterDevices.WithLabelValues(envelope.DeviceId).Add(float64(sizes[i]))
+	}
 }
