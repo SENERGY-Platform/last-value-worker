@@ -16,8 +16,8 @@ github.com/Microsoft/hcsshim v0.12.4 h1:Ev7YUMHAHoWNm+aDSPzc5W9s6E2jyL1szpVDJeZ/
 github.com/Microsoft/hcsshim v0.12.4/go.mod h1:Iyl1WVpZzr+UkzjekHZbV8o5Z9ZkxNGx6CtY2Qg/JVQ=
 github.com/RyanCarrier/dijkstra v1.4.0 h1:wkEVdTBLUiXjeBvDrSuagr72pOt36rUQoIfnnGxFYoQ=
 github.com/RyanCarrier/dijkstra v1.4.0/go.mod h1:9egjhC7eVsfREX6NrYS+1wHzk9C/9v2Cz26/bqpjjTc=
-github.com/SENERGY-Platform/converter v0.0.7 h1:GL7cv/fZJE9000NlwF+r8NntPkZfjLQDdSEBD7K/P5k=
-github.com/SENERGY-Platform/converter v0.0.7/go.mod h1:bXZRXYS1ZFc6oVIzsclAy/whShjbn7/6FtXE9tu4jOE=
+github.com/SENERGY-Platform/converter v0.0.8 h1:/ldihwW9ZEeVKl/7bJc0yN7zJTw0RJ4+/hhys+V7Mac=
+github.com/SENERGY-Platform/converter v0.0.8/go.mod h1:4+Ytf2tB+zUsLHS2TA+4tJTUZJeCUh1JrLFO5xvvrKs=
 github.com/SENERGY-Platform/models/go v0.0.0-20240627082833-157bd627a94f h1:nFZkMoKp6RtsbYijj071sVQ3uZqloDILMWCIDaInUSI=
 github.com/SENERGY-Platform/models/go v0.0.0-20240627082833-157bd627a94f/go.mod h1:bCREPNRN4P8oxLgpC3/ZKK4jXSy4MSPXoiomhohE+aw=
 github.com/beorn7/perks v1.0.1 h1:VlbKKnNfV8bJzeqoa4cOKqO6bYr3WgKZxO8Z16+hsOM=
