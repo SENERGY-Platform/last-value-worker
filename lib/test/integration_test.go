@@ -95,12 +95,12 @@ func TestIntegration(t *testing.T) {
 	permMockServ.Start()
 	defer permMockServ.Close()
 
-	parsedPermSearchUrl, err := url.Parse(permMockServ.URL)
+	parsedPermUrl, err := url.Parse(permMockServ.URL)
 	if err != nil {
 		t.Error(err)
 		return
 	}
-	permSearchMockUrl := "http://" + hostIp + ":" + parsedPermSearchUrl.Port()
+	permUrl := "http://" + hostIp + ":" + parsedPermUrl.Port()
 
 	conf.DeviceRepoUrl, err = iot.Mock(ctx, conf.KafkaBootstrap)
 	if err != nil {
@@ -129,7 +129,7 @@ func TestIntegration(t *testing.T) {
 	}
 	conf.MemcachedUrls = []string{cacheIp + ":11211"}
 
-	timescaleWrapperUrl, err := docker.Timescalewrapper(ctx, wg, conf.PostgresHost, conf.PostgresPort, conf.PostgresUser, conf.PostgresPw, conf.PostgresDb, dockerDeviceRepoUrl, permSearchMockUrl, "", conf.MemcachedUrls)
+	timescaleWrapperUrl, err := docker.Timescalewrapper(ctx, wg, conf.PostgresHost, conf.PostgresPort, conf.PostgresUser, conf.PostgresPw, conf.PostgresDb, dockerDeviceRepoUrl, permUrl, "", conf.MemcachedUrls)
 	if err != nil {
 		t.Error(err)
 		return

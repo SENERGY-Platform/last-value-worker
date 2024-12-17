@@ -26,23 +26,23 @@ import (
 	"sync"
 )
 
-func Timescalewrapper(ctx context.Context, wg *sync.WaitGroup, postgresHost string, postgresPort int, postgresUser string, postgresPw string, postgresDb string, deviceRepoUrl string, permSearchUrl string, servingUrl string, memcacheUrls []string) (wrapperUrl string, err error) {
+func Timescalewrapper(ctx context.Context, wg *sync.WaitGroup, postgresHost string, postgresPort int, postgresUser string, postgresPw string, postgresDb string, deviceRepoUrl string, permUrl string, servingUrl string, memcacheUrls []string) (wrapperUrl string, err error) {
 	log.Println("start timescalewrapper")
 	c, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
 		ContainerRequest: testcontainers.ContainerRequest{
 			Image:           "ghcr.io/senergy-platform/timescale-wrapper:dev",
 			AlwaysPullImage: true,
 			Env: map[string]string{
-				"POSTGRES_PW":           postgresPw,
-				"POSTGRES_HOST":         postgresHost,
-				"POSTGRES_DB":           postgresDb,
-				"POSTGRES_USER":         postgresUser,
-				"POSTGRES_PORT":         strconv.Itoa(postgresPort),
-				"DEVICE_REPO_URL":       deviceRepoUrl,
-				"PERMISSION_SEARCH_URL": permSearchUrl,
-				"SERVING_URL":           servingUrl,
-				"MEMCACHED_URLS":        strings.Join(memcacheUrls, ","),
-				"DEBUG":                 "true",
+				"POSTGRES_PW":     postgresPw,
+				"POSTGRES_HOST":   postgresHost,
+				"POSTGRES_DB":     postgresDb,
+				"POSTGRES_USER":   postgresUser,
+				"POSTGRES_PORT":   strconv.Itoa(postgresPort),
+				"DEVICE_REPO_URL": deviceRepoUrl,
+				"PERMISSIONS_URL": permUrl,
+				"SERVING_URL":     servingUrl,
+				"MEMCACHED_URLS":  strings.Join(memcacheUrls, ","),
+				"DEBUG":           "true",
 			},
 			WaitingFor:   wait.ForListeningPort("8080/tcp"),
 			ExposedPorts: []string{"8080"},

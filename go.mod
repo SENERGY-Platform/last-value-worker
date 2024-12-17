@@ -4,7 +4,7 @@ go 1.22
 
 require (
 	github.com/IBM/sarama v1.43.2
-	github.com/SENERGY-Platform/converter v0.0.8
+	github.com/SENERGY-Platform/converter v0.0.10
 	github.com/SENERGY-Platform/models/go v0.0.0-20240627082833-157bd627a94f
 	github.com/bradfitz/gomemcache v0.0.0-20230905024940-24af94b03874
 	github.com/google/uuid v1.6.0
