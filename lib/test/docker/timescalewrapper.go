@@ -18,12 +18,13 @@ package docker
 
 import (
 	"context"
-	"github.com/testcontainers/testcontainers-go"
-	"github.com/testcontainers/testcontainers-go/wait"
 	"log"
 	"strconv"
 	"strings"
 	"sync"
+
+	"github.com/testcontainers/testcontainers-go"
+	"github.com/testcontainers/testcontainers-go/wait"
 )
 
 func Timescalewrapper(ctx context.Context, wg *sync.WaitGroup, postgresHost string, postgresPort int, postgresUser string, postgresPw string, postgresDb string, deviceRepoUrl string, permUrl string, servingUrl string, memcacheUrls []string) (wrapperUrl string, err error) {
@@ -45,7 +46,7 @@ func Timescalewrapper(ctx context.Context, wg *sync.WaitGroup, postgresHost stri
 				"DEBUG":           "true",
 			},
 			WaitingFor:   wait.ForListeningPort("8080/tcp"),
-			ExposedPorts: []string{"8080"},
+			ExposedPorts: []string{"8080/tcp"},
 		},
 		Started: true,
 	})
@@ -59,10 +60,11 @@ func Timescalewrapper(ctx context.Context, wg *sync.WaitGroup, postgresHost stri
 		log.Println("DEBUG: remove container tableworker", c.Terminate(context.Background()))
 	}()
 
-	ipAddress, err := c.ContainerIP(ctx)
+	ipAddress := "host.docker.internal"
+	temp, err := c.MappedPort(ctx, "8080/tcp")
 	if err != nil {
 		return "", err
 	}
 
-	return "http://" + ipAddress + ":8080", err
+	return "http://" + ipAddress + ":" + temp.Port(), err
 }

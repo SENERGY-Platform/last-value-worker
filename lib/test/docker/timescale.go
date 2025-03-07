@@ -35,7 +35,7 @@ func Timescale(ctx context.Context, wg *sync.WaitGroup) (host string, port int, 
 			Tmpfs:           map[string]string{},
 			WaitingFor:      wait.ForListeningPort("5432/tcp"),
 			ExposedPorts:    []string{"5432/tcp"},
-			AlwaysPullImage: true,
+			AlwaysPullImage: false,
 			Env: map[string]string{
 				"POSTGRES_PASSWORD": pw,
 			},
@@ -45,11 +45,12 @@ func Timescale(ctx context.Context, wg *sync.WaitGroup) (host string, port int, 
 	if err != nil {
 		return host, port, user, pw, db, err
 	}
-	host, err = c.ContainerIP(ctx)
+	host = "host.docker.internal"
+	natPort, err := c.MappedPort(ctx, "5432/tcp")
 	if err != nil {
 		return host, port, user, pw, db, err
 	}
-	port = 5432
+	port = natPort.Int()
 	wg.Add(1)
 	go func() {
 		defer wg.Done()

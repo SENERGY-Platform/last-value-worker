@@ -53,7 +53,7 @@ func Kafka(ctx context.Context, wg *sync.WaitGroup, zookeeperUrl string) (kafkaU
 				wait.ForListeningPort("9092/tcp"),
 			),
 			ExposedPorts:    []string{strconv.Itoa(kafkaport) + ":9092"},
-			AlwaysPullImage: true,
+			AlwaysPullImage: false,
 			Env: map[string]string{
 				"ALLOW_PLAINTEXT_LISTENER":             "yes",
 				"KAFKA_LISTENERS":                      "OUTSIDE://:9092",
@@ -97,7 +97,7 @@ func Zookeeper(ctx context.Context, wg *sync.WaitGroup) (hostPort string, ipAddr
 				wait.ForListeningPort("2181/tcp"),
 			),
 			ExposedPorts:    []string{"2181/tcp"},
-			AlwaysPullImage: true,
+			AlwaysPullImage: false,
 		},
 		Started: true,
 	})

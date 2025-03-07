@@ -5,16 +5,17 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/IBM/sarama"
-	"github.com/SENERGY-Platform/models/go/models"
-	"github.com/google/uuid"
-	"github.com/julienschmidt/httprouter"
 	"log"
 	"net"
 	"net/http"
 	"net/http/httptest"
 	"runtime/debug"
 	"sync"
+
+	"github.com/IBM/sarama"
+	"github.com/SENERGY-Platform/models/go/models"
+	"github.com/google/uuid"
+	"github.com/julienschmidt/httprouter"
 )
 
 func Mock(ctx context.Context, kafkaUrl string) (repoUrl string, err error) {
@@ -45,7 +46,7 @@ func Mock(ctx context.Context, kafkaUrl string) (repoUrl string, err error) {
 	server := &httptest.Server{
 		Config: &http.Server{Handler: NewLogger(router, "DEBUG")},
 	}
-	server.Listener, err = net.Listen("tcp", ":")
+	server.Listener, err = net.Listen("tcp4", ":")
 	if err != nil {
 		return repoUrl, err
 	}

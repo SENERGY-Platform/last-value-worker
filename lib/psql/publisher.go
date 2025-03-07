@@ -18,17 +18,21 @@ package psql
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
+	"slices"
+	"strconv"
+	"strings"
+	"sync"
+	"time"
+
 	"github.com/SENERGY-Platform/converter/lib/converter"
 	"github.com/SENERGY-Platform/last-value-worker/lib/memcached"
 	"github.com/SENERGY-Platform/last-value-worker/lib/meta"
 	"github.com/jackc/pgx/v4/pgxpool"
 	_ "github.com/lib/pq"
-	"log"
-	"strings"
-	"sync"
-	"time"
 )
 
 type Publisher struct {
@@ -145,7 +149,11 @@ func (publisher *Publisher) Publish(mixedEnvelopes []meta.Envelope, mixedTimesta
 		rows := []string{}
 		for i, envelope := range envelopes {
 			values := make([]string, len(fieldNames))
-			m := flatten(envelope.Value)
+			m, err := flatten(envelope.Value, fieldNames, "")
+			if err != nil {
+				log.Println("WARN: Could not flatten message, message ignored! " + err.Error())
+				continue
+			}
 
 			t := deviceTimestamps[deviceId][i]
 
@@ -177,6 +185,9 @@ func (publisher *Publisher) Publish(mixedEnvelopes []meta.Envelope, mixedTimesta
 		}
 		query := "INSERT INTO \"" + table + "\" (\""
 		query += strings.Join(fieldNames, "\", \"") + "\") VALUES " + strings.Join(rows, ", ") + ";"
+		if publisher.debug {
+			log.Println("Executing query ", query)
+		}
 		_, err = publisher.db.Exec(context.Background(), query)
 		if err != nil {
 			if strings.Contains(err.Error(), "SQLSTATE 42P01") {
@@ -203,20 +214,53 @@ func (publisher *Publisher) Publish(mixedEnvelopes []meta.Envelope, mixedTimesta
 	return err
 }
 
-func flatten(m map[string]interface{}) (values map[string]interface{}) {
+func flatten(m map[string]interface{}, fieldNames []string, prefix string) (values map[string]interface{}, err error) {
 	values = make(map[string]interface{})
+	if len(prefix) > 0 {
+		prefix += "."
+	}
 	for k, v := range m {
+		name := prefix + k
 		switch child := v.(type) {
 		case map[string]interface{}:
-			nm := flatten(child)
+			nm, err := flatten(child, fieldNames, name)
+			if err != nil {
+				return nil, err
+			}
 			for nk, nv := range nm {
 				values[k+"."+nk] = nv
 			}
+		case []interface{}:
+			if slices.Contains(fieldNames, name) { // -> should be used as is
+				bytes, err := json.Marshal(v)
+				if err != nil {
+					return nil, err
+				}
+				str := string(bytes)
+				str = strings.ReplaceAll(str, "'", "''")
+				values[k] = "'" + str + "'"
+			} else {
+				for i, nv := range child {
+					subChild, ok := nv.(map[string]interface{})
+					if !ok {
+						return nil, fmt.Errorf("list element is not map: %v", nv)
+					}
+					nm, err := flatten(subChild, fieldNames, name)
+					if err != nil {
+						return nil, err
+					}
+					for nk, nv := range nm {
+						values[k+"."+strconv.Itoa(i)+"."+nk] = nv
+					}
+				}
+			}
 		case string:
-			values[k] = "'" + v.(string) + "'"
+			str := v.(string)
+			str = strings.ReplaceAll(str, "'", "''")
+			values[k] = "'" + str + "'"
 		default:
 			values[k] = v
 		}
 	}
-	return values
+	return values, nil
 }

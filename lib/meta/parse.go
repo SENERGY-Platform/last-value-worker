@@ -17,7 +17,6 @@
 package meta
 
 import (
-	"log"
 	"sort"
 )
 
@@ -45,7 +44,13 @@ func ParseContentVariable(c ContentVariable, path string) []string {
 			s = append(s, ParseContentVariable(sub, prefix)...)
 		}
 	case List:
-		log.Println("WARN: creating fields for list type not supported yet, skipping!")
+		if len(c.SubContentVariables) > 0 && c.SubContentVariables[0].Name == "*" {
+			s = append(s, prefix)
+		} else {
+			for _, sub := range c.SubContentVariables {
+				s = append(s, ParseContentVariable(sub, prefix)...)
+			}
+		}
 	}
 	return s
 }

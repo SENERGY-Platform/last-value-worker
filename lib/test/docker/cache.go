@@ -30,8 +30,9 @@ func Memcached(ctx context.Context, wg *sync.WaitGroup) (hostPort string, ipAddr
 		ContainerRequest: testcontainers.ContainerRequest{
 			Image:           "memcached:1.5.12-alpine",
 			Tmpfs:           map[string]string{},
+			ExposedPorts:    []string{"11211/tcp"},
 			WaitingFor:      wait.ForListeningPort("11211/tcp"),
-			AlwaysPullImage: true,
+			AlwaysPullImage: false,
 		},
 		Started: true,
 	})
@@ -45,10 +46,7 @@ func Memcached(ctx context.Context, wg *sync.WaitGroup) (hostPort string, ipAddr
 		log.Println("DEBUG: remove container memcached", c.Terminate(context.Background()))
 	}()
 
-	ipAddress, err = c.ContainerIP(ctx)
-	if err != nil {
-		return "", "", err
-	}
+	ipAddress = "host.docker.internal"
 	temp, err := c.MappedPort(ctx, "11211/tcp")
 	if err != nil {
 		return "", "", err
