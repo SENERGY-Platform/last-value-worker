@@ -58,8 +58,8 @@ func (this *Consumer) GetTopics() []string {
 func (this *Consumer) start() error {
 	config := sarama.NewConfig()
 	config.Consumer.Offsets.Initial = this.offset
-	config.Consumer.Group.Rebalance.Strategy = sarama.BalanceStrategySticky
-	config.ChannelBufferSize = 65536
+	config.Consumer.Group.Rebalance.Strategy = sarama.NewBalanceStrategySticky()
+	//config.ChannelBufferSize = 65536
 	config.Net.ReadTimeout = 120 * time.Second
 	config.Net.WriteTimeout = 120 * time.Second
 
