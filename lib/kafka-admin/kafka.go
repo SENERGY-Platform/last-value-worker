@@ -17,8 +17,11 @@
 package kafkaAdmin
 
 import (
+	"log"
+
 	"github.com/IBM/sarama"
 	"github.com/SENERGY-Platform/last-value-worker/lib/config"
+	"github.com/SENERGY-Platform/last-value-worker/lib/consumer"
 )
 
 type KafkaAdmin struct {
@@ -44,11 +47,11 @@ func (ka *KafkaAdmin) ListTopics() ([]string, error) {
 	for topic := range topics {
 		res = append(res, topic)
 	}
+	log.Printf("DEBUG: Got %d topics from kafka admin API\n", len(res))
 	return res, nil
 }
 
 func (ka *KafkaAdmin) getAdmin() (admin sarama.ClusterAdmin, err error) {
-	sconfig := sarama.NewConfig()
-	sconfig.Version = sarama.V2_4_0_0
+	sconfig := consumer.SaramaConfig()
 	return sarama.NewClusterAdmin([]string{ka.config.KafkaBootstrap}, sconfig)
 }

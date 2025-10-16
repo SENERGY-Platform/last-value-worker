@@ -23,7 +23,6 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"time"
 )
 
 const Latest = sarama.OffsetNewest
@@ -56,14 +55,8 @@ func (this *Consumer) GetTopics() []string {
 }
 
 func (this *Consumer) start() error {
-	config := sarama.NewConfig()
+	config := SaramaConfig()
 	config.Consumer.Offsets.Initial = this.offset
-	config.Consumer.Group.Rebalance.Strategy = sarama.NewBalanceStrategySticky()
-	config.ChannelBufferSize = 65536
-	config.Net.ReadTimeout = 120 * time.Second
-	config.Net.WriteTimeout = 120 * time.Second
-	config.Producer.MaxMessageBytes *= 100
-	config.Consumer.Fetch.Default *= 100
 
 	client, err := sarama.NewConsumerGroup(strings.Split(this.kafkaBootstrap, ","), this.groupId, config)
 	if err != nil {
