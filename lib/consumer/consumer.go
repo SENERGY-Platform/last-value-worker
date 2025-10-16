@@ -63,6 +63,7 @@ func (this *Consumer) start() error {
 	config.Net.ReadTimeout = 120 * time.Second
 	config.Net.WriteTimeout = 120 * time.Second
 	config.Producer.MaxMessageBytes *= 100
+	config.Consumer.Fetch.Default *= 100
 
 	client, err := sarama.NewConsumerGroup(strings.Split(this.kafkaBootstrap, ","), this.groupId, config)
 	if err != nil {
