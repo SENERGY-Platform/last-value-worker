@@ -108,6 +108,7 @@ func (wd *Manager) newConsumer() error {
 			topics = append(topics, topic)
 		}
 	}
+	log.Printf("Got %d service topics\n", len(topics))
 	if wd.consumer != nil && meta.EqualStringSlice(wd.consumer.GetTopics(), topics) {
 		log.Println("No changes...")
 		return nil

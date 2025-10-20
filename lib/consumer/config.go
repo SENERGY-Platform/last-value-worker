@@ -29,7 +29,7 @@ func SaramaConfig() *sarama.Config {
 	config.ChannelBufferSize = 65536
 	config.Net.ReadTimeout = 120 * time.Second
 	config.Net.WriteTimeout = 120 * time.Second
-	config.Producer.MaxMessageBytes *= 100
-	config.Consumer.Fetch.Default *= 100
+	//config.Producer.MaxMessageBytes *= 100
+	//config.Consumer.Fetch.Default *= 100
 	return config
 }
