@@ -149,7 +149,7 @@ func (publisher *Publisher) Publish(mixedEnvelopes []meta.Envelope, mixedTimesta
 		rows := []string{}
 		for i, envelope := range envelopes {
 			values := make([]string, len(fieldNames))
-			m, err := flatten(envelope.Value, fieldNames, "")
+			m, err := flatten(deviceId, envelope.Value, fieldNames, "")
 			if err != nil {
 				log.Println("WARN: Could not flatten message, message ignored! " + err.Error())
 				continue
@@ -214,7 +214,7 @@ func (publisher *Publisher) Publish(mixedEnvelopes []meta.Envelope, mixedTimesta
 	return err
 }
 
-func flatten(m map[string]interface{}, fieldNames []string, prefix string) (values map[string]interface{}, err error) {
+func flatten(deviceId string, m map[string]interface{}, fieldNames []string, prefix string) (values map[string]interface{}, err error) {
 	values = make(map[string]interface{})
 	if len(prefix) > 0 {
 		prefix += "."
@@ -223,7 +223,7 @@ func flatten(m map[string]interface{}, fieldNames []string, prefix string) (valu
 		name := prefix + k
 		switch child := v.(type) {
 		case map[string]interface{}:
-			nm, err := flatten(child, fieldNames, name)
+			nm, err := flatten(deviceId, child, fieldNames, name)
 			if err != nil {
 				return nil, err
 			}
@@ -243,9 +243,10 @@ func flatten(m map[string]interface{}, fieldNames []string, prefix string) (valu
 				for i, nv := range child {
 					subChild, ok := nv.(map[string]interface{})
 					if !ok {
-						return nil, fmt.Errorf("list element is not map: %v", nv)
+						log.Printf("list element is not map: %v, ignoring field %s of device %s\n", nv, name, deviceId)
+						continue
 					}
-					nm, err := flatten(subChild, fieldNames, name)
+					nm, err := flatten(deviceId, subChild, fieldNames, name)
 					if err != nil {
 						return nil, err
 					}
