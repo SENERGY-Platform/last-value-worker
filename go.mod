@@ -1,6 +1,6 @@
 module github.com/SENERGY-Platform/last-value-worker
 
-go 1.22
+go 1.26.1
 
 require (
 	github.com/IBM/sarama v1.43.2
@@ -22,6 +22,7 @@ require (
 	github.com/Microsoft/go-winio v0.6.2 // indirect
 	github.com/Microsoft/hcsshim v0.12.4 // indirect
 	github.com/RyanCarrier/dijkstra v1.4.0 // indirect
+	github.com/SENERGY-Platform/go-service-base/struct-logger v0.6.0
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect

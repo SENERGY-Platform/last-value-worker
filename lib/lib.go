@@ -18,12 +18,14 @@ package lib
 
 import (
 	"context"
-	"github.com/SENERGY-Platform/last-value-worker/lib/config"
-	"github.com/SENERGY-Platform/last-value-worker/lib/manager"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"log"
 	"net/http"
 	"sync"
+
+	"github.com/SENERGY-Platform/go-service-base/struct-logger/attributes"
+	"github.com/SENERGY-Platform/last-value-worker/lib/config"
+	"github.com/SENERGY-Platform/last-value-worker/lib/log"
+	"github.com/SENERGY-Platform/last-value-worker/lib/manager"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 func Start(conf config.Config, ctx context.Context) (wg *sync.WaitGroup, err error) {
@@ -33,8 +35,10 @@ func Start(conf config.Config, ctx context.Context) (wg *sync.WaitGroup, err err
 
 	go func() {
 		http.Handle("/metrics", promhttp.Handler())
-		log.Println("INFO: Starting prometheus metrics on :2112/metrics")
-		log.Println("WARNING: Metrics server exited: " + http.ListenAndServe(":2112", nil).Error())
+		log.Logger.Info("Starting prometheus metrics on :2112/metrics")
+		if err := http.ListenAndServe(":2112", nil); err != nil {
+			log.Logger.Warn("Metrics server exited", attributes.ErrorKey, err)
+		}
 	}()
 
 	return wg, err

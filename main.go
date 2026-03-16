@@ -19,8 +19,12 @@ package main
 import (
 	"context"
 	"flag"
+
+	"github.com/SENERGY-Platform/go-service-base/struct-logger/attributes"
 	"github.com/SENERGY-Platform/last-value-worker/lib"
 	"github.com/SENERGY-Platform/last-value-worker/lib/config"
+	_log "github.com/SENERGY-Platform/last-value-worker/lib/log"
+
 	"log"
 	"os"
 	"os/signal"
@@ -36,6 +40,7 @@ func main() {
 	if err != nil {
 		log.Fatal("ERROR: unable to load config", err)
 	}
+	_log.Init(conf)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	wg, err := lib.Start(conf, ctx)
@@ -44,6 +49,7 @@ func main() {
 		if wg != nil {
 			wg.Wait()
 		}
+		_log.Logger.Error("unable to start lib", attributes.ErrorKey, err)
 		log.Fatal(err)
 	}
 
@@ -52,11 +58,11 @@ func main() {
 		shutdown := make(chan os.Signal, 1)
 		signal.Notify(shutdown, syscall.SIGINT, syscall.SIGTERM, syscall.SIGKILL)
 		sig := <-shutdown
-		log.Println("received shutdown signal", sig)
+		_log.Logger.Info("received shutdown signal", "signal", sig)
 		shutdownTime = time.Now()
 		cancel()
 	}()
 
 	wg.Wait()
-	log.Println("Shutdown complete, took", time.Since(shutdownTime))
+	_log.Logger.Info("Shutdown complete", "duration", time.Since(shutdownTime))
 }

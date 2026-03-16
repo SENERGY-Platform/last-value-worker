@@ -18,17 +18,18 @@ package docker
 
 import (
 	"context"
-	"log"
 	"strconv"
 	"strings"
 	"sync"
 
+	"github.com/SENERGY-Platform/go-service-base/struct-logger/attributes"
+	"github.com/SENERGY-Platform/last-value-worker/lib/log"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
 )
 
 func Timescalewrapper(ctx context.Context, wg *sync.WaitGroup, postgresHost string, postgresPort int, postgresUser string, postgresPw string, postgresDb string, deviceRepoUrl string, permUrl string, servingUrl string, memcacheUrls []string) (wrapperUrl string, err error) {
-	log.Println("start timescalewrapper")
+	log.Logger.Info("start timescalewrapper")
 	c, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
 		ContainerRequest: testcontainers.ContainerRequest{
 			Image:           "ghcr.io/senergy-platform/timescale-wrapper:dev",
@@ -57,7 +58,9 @@ func Timescalewrapper(ctx context.Context, wg *sync.WaitGroup, postgresHost stri
 	go func() {
 		defer wg.Done()
 		<-ctx.Done()
-		log.Println("DEBUG: remove container tableworker", c.Terminate(context.Background()))
+		if tErr := c.Terminate(context.Background()); tErr != nil {
+			log.Logger.Debug("remove container tableworker", attributes.ErrorKey, tErr)
+		}
 	}()
 
 	ipAddress := "host.docker.internal"

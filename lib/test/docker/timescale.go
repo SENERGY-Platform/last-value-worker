@@ -18,14 +18,16 @@ package docker
 
 import (
 	"context"
+	"sync"
+
+	"github.com/SENERGY-Platform/go-service-base/struct-logger/attributes"
+	"github.com/SENERGY-Platform/last-value-worker/lib/log"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
-	"log"
-	"sync"
 )
 
 func Timescale(ctx context.Context, wg *sync.WaitGroup) (host string, port int, user string, pw string, db string, err error) {
-	log.Println("start timescale")
+	log.Logger.Info("start timescale")
 	pw = "postgrespw"
 	user = "postgres"
 	db = "postgres"
@@ -55,7 +57,9 @@ func Timescale(ctx context.Context, wg *sync.WaitGroup) (host string, port int, 
 	go func() {
 		defer wg.Done()
 		<-ctx.Done()
-		log.Println("DEBUG: remove container timescale", c.Terminate(context.Background()))
+		if tErr := c.Terminate(context.Background()); tErr != nil {
+			log.Logger.Debug("remove container timescale", attributes.ErrorKey, tErr)
+		}
 	}()
 
 	return host, port, user, pw, db, err

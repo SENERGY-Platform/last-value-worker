@@ -20,20 +20,22 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"net/http"
+	"strings"
+	"sync"
+	"time"
+
 	"github.com/IBM/sarama"
+	"github.com/SENERGY-Platform/go-service-base/struct-logger/attributes"
 	"github.com/SENERGY-Platform/last-value-worker/lib/config"
 	"github.com/SENERGY-Platform/last-value-worker/lib/consumer"
 	kafkaAdmin "github.com/SENERGY-Platform/last-value-worker/lib/kafka-admin"
+	"github.com/SENERGY-Platform/last-value-worker/lib/log"
 	"github.com/SENERGY-Platform/last-value-worker/lib/memcached"
 	"github.com/SENERGY-Platform/last-value-worker/lib/meta"
 	"github.com/SENERGY-Platform/last-value-worker/lib/psql"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
-	"log"
-	"net/http"
-	"strings"
-	"sync"
-	"time"
 )
 
 type Manager struct {
@@ -108,13 +110,13 @@ func (wd *Manager) newConsumer() error {
 			topics = append(topics, topic)
 		}
 	}
-	log.Printf("Got %d service topics\n", len(topics))
+	log.Logger.Info("Got service topics", "count", len(topics))
 	if wd.consumer != nil && meta.EqualStringSlice(wd.consumer.GetTopics(), topics) {
-		log.Println("No changes...")
+		log.Logger.Info("No changes")
 		return nil
 	}
 	if len(topics) == 0 {
-		log.Println("No matching topics")
+		log.Logger.Warn("No matching topics")
 		return err
 	}
 	if wd.consumerCancel != nil {
@@ -128,19 +130,19 @@ func (wd *Manager) newConsumer() error {
 }
 
 func (wd *Manager) consumeDeviceType(_ string, _ []*sarama.ConsumerMessage) error {
-	log.Println("Received device type update, updating consumer if needed")
-	log.Println("Waiting for topic adjustments....")
+	log.Logger.Info("Received device type update, updating consumer if needed")
+	log.Logger.Info("Waiting for topic adjustments")
 	time.Sleep(5 * time.Second) // wait for topic adjustments
 	err := wd.newConsumer()
 	if err != nil {
 		return err
 	}
-	log.Println("Updated done")
+	log.Logger.Info("Update done")
 	return nil
 }
 
 func (wd *Manager) errorhandlerDeviceType(err error, _ *consumer.Consumer, _ string) {
-	log.Println("ERROR consuming device type update: " + err.Error())
+	log.Logger.Error("consuming device type update failed", attributes.ErrorKey, err)
 }
 
 func (wd *Manager) consumeData(_ string, msgs []*sarama.ConsumerMessage) error {
@@ -161,7 +163,7 @@ func (wd *Manager) consumeData(_ string, msgs []*sarama.ConsumerMessage) error {
 	service, code, err := wd.memcached.GetService(envelopes[0].ServiceId)
 	if err != nil {
 		if code == http.StatusNotFound {
-			log.Println("WARN: Service " + envelopes[0].ServiceId + " not found, ignoring messages!")
+			log.Logger.Warn("Service not found, ignoring messages", "service_id", envelopes[0].ServiceId)
 			return nil
 		}
 		return err
@@ -199,7 +201,8 @@ func (wd *Manager) consumeData(_ string, msgs []*sarama.ConsumerMessage) error {
 }
 
 func (wd *Manager) errorhandlerData(err error, _ *consumer.Consumer, topic string) {
-	log.Fatalln("ERROR consuming data from topic " + topic + " : " + err.Error())
+	log.Logger.Error("consuming data from topic failed", "topic", topic, attributes.ErrorKey, err)
+	panic(err)
 }
 
 func collectMetrics(envelopes []meta.Envelope, sizes []int) {

@@ -18,9 +18,11 @@ package iot
 
 import (
 	"encoding/json"
-	"github.com/julienschmidt/httprouter"
-	"log"
 	"net/http"
+
+	"github.com/SENERGY-Platform/go-service-base/struct-logger/attributes"
+	"github.com/SENERGY-Platform/last-value-worker/lib/log"
+	"github.com/julienschmidt/httprouter"
 )
 
 func ServicesEndpoint(control *Controller, router *httprouter.Router) {
@@ -36,7 +38,7 @@ func ServicesEndpoint(control *Controller, router *httprouter.Router) {
 		writer.Header().Set("Content-Type", "application/json; charset=utf-8")
 		err = json.NewEncoder(writer).Encode(result)
 		if err != nil {
-			log.Println("ERROR: unable to encode response", err)
+			log.Logger.Error("unable to encode response", attributes.ErrorKey, err)
 		}
 		return
 	})

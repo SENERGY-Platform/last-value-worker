@@ -1,4 +1,4 @@
-FROM golang:1.22 AS builder
+FROM golang:1.26 AS builder
 
 COPY . /go/src/app
 WORKDIR /go/src/app
@@ -17,5 +17,5 @@ COPY --from=builder /go/src/app/version.txt .
 
 EXPOSE 8080
 
-LABEL org.opencontainers.image.source https://github.com/SENERGY-Platform/last-value-worker
+LABEL org.opencontainers.image.source=https://github.com/SENERGY-Platform/last-value-worker
 ENTRYPOINT ["./app"]

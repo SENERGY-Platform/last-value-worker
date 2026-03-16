@@ -17,11 +17,10 @@
 package kafkaAdmin
 
 import (
-	"log"
-
 	"github.com/IBM/sarama"
 	"github.com/SENERGY-Platform/last-value-worker/lib/config"
 	"github.com/SENERGY-Platform/last-value-worker/lib/consumer"
+	"github.com/SENERGY-Platform/last-value-worker/lib/log"
 )
 
 type KafkaAdmin struct {
@@ -47,7 +46,7 @@ func (ka *KafkaAdmin) ListTopics() ([]string, error) {
 	for topic := range topics {
 		res = append(res, topic)
 	}
-	log.Printf("DEBUG: Got %d topics from kafka admin API\n", len(res))
+	log.Logger.Debug("Got topics from kafka admin API", "count", len(res))
 	return res, nil
 }
 

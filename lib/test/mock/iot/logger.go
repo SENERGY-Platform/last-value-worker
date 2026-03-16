@@ -4,8 +4,10 @@ import (
 	"bytes"
 	"io"
 	"io/ioutil"
-	"log"
 	"net/http"
+
+	"github.com/SENERGY-Platform/go-service-base/struct-logger/attributes"
+	"github.com/SENERGY-Platform/last-value-worker/lib/log"
 )
 
 func NewLogger(handler http.Handler, logLevel string) *LoggerMiddleWare {
@@ -32,7 +34,7 @@ func (this *LoggerMiddleWare) log(request *http.Request) {
 		path := request.URL
 
 		if this.logLevel == "CALL" {
-			log.Printf("[%v] %v \n", method, path)
+			log.Logger.Info("iot request", "method", method, "path", path)
 		}
 
 		if this.logLevel == "DEBUG" {
@@ -41,12 +43,12 @@ func (this *LoggerMiddleWare) log(request *http.Request) {
 			temp := io.TeeReader(request.Body, &buf)
 			b, err := ioutil.ReadAll(temp)
 			if err != nil {
-				log.Println("ERROR: read error in debuglog:", err)
+				log.Logger.Error("read error in debuglog", attributes.ErrorKey, err)
 			}
 			request.Body = ioutil.NopCloser(bytes.NewReader(buf.Bytes()))
 
 			client := request.RemoteAddr
-			log.Printf("%v [%v] %v %v", client, method, path, string(b))
+			log.Logger.Debug("iot request debug", "client", client, "method", method, "path", path, "body", string(b))
 
 		}
 

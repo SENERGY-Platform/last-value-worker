@@ -18,14 +18,16 @@ package docker
 
 import (
 	"context"
+	"sync"
+
+	"github.com/SENERGY-Platform/go-service-base/struct-logger/attributes"
+	"github.com/SENERGY-Platform/last-value-worker/lib/log"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
-	"log"
-	"sync"
 )
 
 func Memcached(ctx context.Context, wg *sync.WaitGroup) (hostPort string, ipAddress string, err error) {
-	log.Println("start memcached")
+	log.Logger.Info("start memcached")
 	c, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
 		ContainerRequest: testcontainers.ContainerRequest{
 			Image:           "memcached:1.5.12-alpine",
@@ -43,7 +45,9 @@ func Memcached(ctx context.Context, wg *sync.WaitGroup) (hostPort string, ipAddr
 	go func() {
 		defer wg.Done()
 		<-ctx.Done()
-		log.Println("DEBUG: remove container memcached", c.Terminate(context.Background()))
+		if tErr := c.Terminate(context.Background()); tErr != nil {
+			log.Logger.Debug("remove container memcached", attributes.ErrorKey, tErr)
+		}
 	}()
 
 	ipAddress = "host.docker.internal"

@@ -18,6 +18,8 @@ github.com/RyanCarrier/dijkstra v1.4.0 h1:wkEVdTBLUiXjeBvDrSuagr72pOt36rUQoIfnnG
 github.com/RyanCarrier/dijkstra v1.4.0/go.mod h1:9egjhC7eVsfREX6NrYS+1wHzk9C/9v2Cz26/bqpjjTc=
 github.com/SENERGY-Platform/converter v0.0.10 h1:Af7+n6XNZHBQ+Af+5wSbLWF5EWSYcruTyI3q34tnpg4=
 github.com/SENERGY-Platform/converter v0.0.10/go.mod h1:rMEbO/JjpxyLTDm4D1uahYfJWqMMmQfnIXOwLHXk99U=
+github.com/SENERGY-Platform/go-service-base/struct-logger v0.6.0 h1:DQNAPU1DI3XNyLaIGnHN9O0gZ7Q+tyOq/ZmAvbL/5gg=
+github.com/SENERGY-Platform/go-service-base/struct-logger v0.6.0/go.mod h1:z9cf8WOUMLoifRj5Tqts1MNe6QoPFq5Msxj899ZC11g=
 github.com/SENERGY-Platform/models/go v0.0.0-20240627082833-157bd627a94f h1:nFZkMoKp6RtsbYijj071sVQ3uZqloDILMWCIDaInUSI=
 github.com/SENERGY-Platform/models/go v0.0.0-20240627082833-157bd627a94f/go.mod h1:bCREPNRN4P8oxLgpC3/ZKK4jXSy4MSPXoiomhohE+aw=
 github.com/beorn7/perks v1.0.1 h1:VlbKKnNfV8bJzeqoa4cOKqO6bYr3WgKZxO8Z16+hsOM=

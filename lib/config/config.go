@@ -41,6 +41,7 @@ type Config struct {
 	PostgresPw         string   `json:"postgres_pw" config:"secret"`
 	PostgresDb         string   `json:"postgres_db"`
 	Debug              bool     `json:"debug"`
+	LogHandler         string   `json:"log_handler"`
 }
 
 // loads config from json in location and used environment variables (e.g ZookeeperUrl --> ZOOKEEPER_URL)

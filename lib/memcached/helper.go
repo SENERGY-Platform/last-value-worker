@@ -19,13 +19,15 @@ package memcached
 import (
 	"encoding/json"
 	"errors"
-	"github.com/SENERGY-Platform/converter/lib/converter/characteristics"
-	"github.com/SENERGY-Platform/last-value-worker/lib/meta"
-	"github.com/bradfitz/gomemcache/memcache"
-	"log"
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/SENERGY-Platform/converter/lib/converter/characteristics"
+	"github.com/SENERGY-Platform/go-service-base/struct-logger/attributes"
+	"github.com/SENERGY-Platform/last-value-worker/lib/log"
+	"github.com/SENERGY-Platform/last-value-worker/lib/meta"
+	"github.com/bradfitz/gomemcache/memcache"
 )
 
 func (this *Memcached) GetTimestampFromMessage(message map[string]interface{}, service meta.Service) (t *time.Time, err error) {
@@ -50,7 +52,7 @@ func (this *Memcached) GetTimestampFromMessage(message map[string]interface{}, s
 						Expiration: 5 * 60,
 					})
 					if err != nil {
-						log.Println("WARNING: Could not wrote to memcached: " + err.Error())
+						log.Logger.Warn("Could not write to memcached", attributes.ErrorKey, err)
 					}
 				}
 			} else {
@@ -93,7 +95,7 @@ func (this *Memcached) GetService(serviceId string) (service meta.Service, code 
 			Expiration: 5 * 60,
 		})
 		if err != nil {
-			log.Println("WARNING: " + err.Error())
+			log.Logger.Warn("Could not cache service", attributes.ErrorKey, err)
 			err = nil
 		}
 	}

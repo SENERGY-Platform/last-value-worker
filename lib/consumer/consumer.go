@@ -18,11 +18,13 @@ package consumer
 
 import (
 	"context"
-	"github.com/IBM/sarama"
-	"log"
 	"strconv"
 	"strings"
 	"sync"
+
+	"github.com/IBM/sarama"
+	"github.com/SENERGY-Platform/go-service-base/struct-logger/attributes"
+	"github.com/SENERGY-Platform/last-value-worker/lib/log"
 )
 
 const Latest = sarama.OffsetNewest
@@ -67,11 +69,12 @@ func (this *Consumer) start() error {
 		for {
 			select {
 			case <-this.ctx.Done():
-				log.Println("close kafka reader")
+				log.Logger.Info("close kafka reader")
 				return
 			default:
 				if err := client.Consume(this.ctx, this.topics, this); err != nil {
-					log.Panicf("Error from consumer: %v", err)
+					log.Logger.Error("Error from consumer", attributes.ErrorKey, err)
+					panic(err)
 				}
 				// check if context was cancelled, signaling that the consumer should stop
 				if this.ctx.Err() != nil {
@@ -83,7 +86,7 @@ func (this *Consumer) start() error {
 	}()
 
 	<-this.ready // Await till the consumer has been set up
-	log.Println("Kafka consumer " + this.groupId + " up and running...")
+	log.Logger.Info("Kafka consumer up and running", "group_id", this.groupId)
 
 	return err
 }
@@ -97,9 +100,9 @@ func (this *Consumer) Setup(sarama.ConsumerGroupSession) error {
 
 // Cleanup is run at the end of a session, once all ConsumeClaim goroutines have exited
 func (this *Consumer) Cleanup(sarama.ConsumerGroupSession) error {
-	log.Println("Cleaning up kafka session " + this.groupId)
+	log.Logger.Info("Cleaning up kafka session", "group_id", this.groupId)
 	this.internalWg.Wait()
-	log.Println("Cleaned up kafka session " + this.groupId)
+	log.Logger.Info("Cleaned up kafka session", "group_id", this.groupId)
 	this.wg.Done()
 	return nil
 }
@@ -129,7 +132,7 @@ func (this *Consumer) ConsumeClaim(session sarama.ConsumerGroupSession, claim sa
 			topic := topic
 			msgs := msgs
 			if this.debug {
-				log.Println("Got " + strconv.Itoa(len(msgs)) + " from topic " + topic)
+				log.Logger.Debug("Got messages from topic", "count", strconv.Itoa(len(msgs)), "topic", topic)
 			}
 			go func() {
 				err := this.listener(topic, msgs)

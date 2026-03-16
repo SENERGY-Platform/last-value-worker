@@ -38,6 +38,7 @@ import (
 	"github.com/SENERGY-Platform/converter/lib/converter/characteristics"
 	"github.com/SENERGY-Platform/last-value-worker/lib"
 	"github.com/SENERGY-Platform/last-value-worker/lib/config"
+	"github.com/SENERGY-Platform/last-value-worker/lib/log"
 	"github.com/SENERGY-Platform/last-value-worker/lib/meta"
 	"github.com/SENERGY-Platform/last-value-worker/lib/test/docker"
 	"github.com/SENERGY-Platform/last-value-worker/lib/test/mock/iot"
@@ -46,6 +47,7 @@ import (
 )
 
 func TestIntegration(t *testing.T) {
+	log.InitForTest()
 	wg := &sync.WaitGroup{}
 	defer wg.Wait()
 	ctx, cancel := context.WithCancel(context.Background())

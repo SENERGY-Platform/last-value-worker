@@ -18,15 +18,20 @@ package memcached
 
 import (
 	"encoding/json"
+	"errors"
+	"time"
+
+	"github.com/SENERGY-Platform/go-service-base/struct-logger/attributes"
+	"github.com/SENERGY-Platform/last-value-worker/lib/log"
 	"github.com/SENERGY-Platform/last-value-worker/lib/meta"
 	"github.com/bradfitz/gomemcache/memcache"
-	"log"
-	"time"
 )
 
 func (this *Memcached) Publish(envelopes []meta.Envelope, timestamps []time.Time, service meta.Service) (sizes []int, err error) {
 	if len(envelopes) != len(timestamps) {
-		log.Fatalln("FATAL: Expect same length envelopes and timestamps")
+		err = errors.New("expect same length envelopes and timestamps")
+		log.Logger.Error("invalid publish input", attributes.ErrorKey, err)
+		panic(err)
 	}
 	sizes = make([]int, len(envelopes))
 	start := time.Now()
@@ -60,7 +65,7 @@ func (this *Memcached) Publish(envelopes []meta.Envelope, timestamps []time.Time
 		}
 	}
 	if this.config.Debug {
-		log.Println("Memcached publishing took ", time.Since(start))
+		log.Logger.Debug("Memcached publishing took", "duration", time.Since(start))
 	}
 
 	return sizes, err

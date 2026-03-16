@@ -18,15 +18,17 @@ package docker
 
 import (
 	"context"
-	_ "github.com/lib/pq"
-	"github.com/testcontainers/testcontainers-go"
-	"log"
 	"strconv"
 	"sync"
+
+	"github.com/SENERGY-Platform/go-service-base/struct-logger/attributes"
+	"github.com/SENERGY-Platform/last-value-worker/lib/log"
+	_ "github.com/lib/pq"
+	"github.com/testcontainers/testcontainers-go"
 )
 
 func Tableworker(ctx context.Context, wg *sync.WaitGroup, postgresHost string, postgresPort int, postgresUser string, postgresPw string, postgresDb string, kafkaBootstrap string, deviceManagerUrl string) (err error) {
-	log.Println("start tableworker")
+	log.Logger.Info("start tableworker")
 	c, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
 		ContainerRequest: testcontainers.ContainerRequest{
 			Image:           "ghcr.io/senergy-platform/timescale-tableworker:dev",
@@ -52,7 +54,9 @@ func Tableworker(ctx context.Context, wg *sync.WaitGroup, postgresHost string, p
 	go func() {
 		defer wg.Done()
 		<-ctx.Done()
-		log.Println("DEBUG: remove container tableworker", c.Terminate(context.Background()))
+		if tErr := c.Terminate(context.Background()); tErr != nil {
+			log.Logger.Debug("remove container tableworker", attributes.ErrorKey, tErr)
+		}
 	}()
 
 	return err

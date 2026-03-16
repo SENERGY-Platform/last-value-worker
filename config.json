@@ -11,5 +11,6 @@
   "postgres_user": "postgres",
   "postgres_pw": "postgrespw",
   "postgres_db": "postgres",
-  "debug": false
+  "debug": false,
+  "log_handler": "json"
 }

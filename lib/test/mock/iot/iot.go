@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -13,13 +12,15 @@ import (
 	"sync"
 
 	"github.com/IBM/sarama"
+	"github.com/SENERGY-Platform/go-service-base/struct-logger/attributes"
+	"github.com/SENERGY-Platform/last-value-worker/lib/log"
 	"github.com/SENERGY-Platform/models/go/models"
 	"github.com/google/uuid"
 	"github.com/julienschmidt/httprouter"
 )
 
 func Mock(ctx context.Context, kafkaUrl string) (repoUrl string, err error) {
-	log.Println("start iot mock")
+	log.Logger.Info("start iot mock")
 
 	sconf := sarama.NewConfig()
 	sconf.Producer.Retry.Max = 5
@@ -62,8 +63,8 @@ func Mock(ctx context.Context, kafkaUrl string) (repoUrl string, err error) {
 func getRouter(controller *Controller) (router *httprouter.Router, err error) {
 	defer func() {
 		if r := recover(); r != nil && err == nil {
-			log.Printf("%s: %s", r, debug.Stack())
 			err = errors.New(fmt.Sprint("Recovered Error: ", r))
+			log.Logger.Error("router panic recovered", attributes.ErrorKey, err, "stack", string(debug.Stack()))
 		}
 	}()
 	router = httprouter.New()

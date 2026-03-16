@@ -21,7 +21,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 	"slices"
 	"strconv"
 	"strings"
@@ -29,6 +28,8 @@ import (
 	"time"
 
 	"github.com/SENERGY-Platform/converter/lib/converter"
+	"github.com/SENERGY-Platform/go-service-base/struct-logger/attributes"
+	"github.com/SENERGY-Platform/last-value-worker/lib/log"
 	"github.com/SENERGY-Platform/last-value-worker/lib/memcached"
 	"github.com/SENERGY-Platform/last-value-worker/lib/meta"
 	"github.com/jackc/pgx/v4/pgxpool"
@@ -71,7 +72,7 @@ func New(postgresHost string, postgresPort int, postgresUser string, postgresPw 
 	go func() {
 		<-timeout.Done()
 		if timeout.Err() != context.Canceled {
-			log.Println("ERROR: psql publisher connection timeout")
+			log.Logger.Error("psql publisher connection timeout", attributes.ErrorKey, timeout.Err())
 			cancel()
 		}
 	}()
@@ -106,7 +107,9 @@ var slowProducerTimeout = 2 * time.Second
 
 func (publisher *Publisher) Publish(mixedEnvelopes []meta.Envelope, mixedTimestamps []time.Time, service meta.Service) (err error) {
 	if len(mixedEnvelopes) != len(mixedTimestamps) {
-		log.Fatalln("FATAL: Expect same length envelopes and timestamps")
+		err = errors.New("expect same length envelopes and timestamps")
+		log.Logger.Error("invalid publish input", attributes.ErrorKey, err)
+		panic(err)
 	}
 	start := time.Now()
 
@@ -151,7 +154,7 @@ func (publisher *Publisher) Publish(mixedEnvelopes []meta.Envelope, mixedTimesta
 			values := make([]string, len(fieldNames))
 			m, err := flatten(deviceId, envelope.Value, fieldNames, "")
 			if err != nil {
-				log.Println("WARN: Could not flatten message, message ignored! " + err.Error())
+				log.Logger.Warn("Could not flatten message, message ignored", attributes.ErrorKey, err)
 				continue
 			}
 
@@ -159,7 +162,7 @@ func (publisher *Publisher) Publish(mixedEnvelopes []meta.Envelope, mixedTimesta
 
 			tOverride, err := publisher.memcached.GetTimestampFromMessage(envelopes[i].Value, service)
 			if err != nil {
-				log.Println("WARN: Could not get timestamp, message ignored! " + err.Error())
+				log.Logger.Warn("Could not get timestamp, message ignored", attributes.ErrorKey, err)
 				continue
 			}
 			if tOverride != nil {
@@ -186,18 +189,18 @@ func (publisher *Publisher) Publish(mixedEnvelopes []meta.Envelope, mixedTimesta
 		query := "INSERT INTO \"" + table + "\" (\""
 		query += strings.Join(fieldNames, "\", \"") + "\") VALUES " + strings.Join(rows, ", ") + ";"
 		if publisher.debug {
-			log.Println("Executing query ", query)
+			log.Logger.Debug("Executing query", "query", query)
 		}
 		_, err = publisher.db.Exec(context.Background(), query)
 		if err != nil {
 			if strings.Contains(err.Error(), "SQLSTATE 42P01") {
-				log.Println("WARNING: " + err.Error() + "; Device deleted?")
+				log.Logger.Warn("Device deleted?", attributes.ErrorKey, err)
 				err = nil
 			} else if strings.Contains(err.Error(), "SQLSTATE 42703") {
-				log.Println("WARNING: " + err.Error() + "; Device message outdated?")
+				log.Logger.Warn("Device message outdated?", attributes.ErrorKey, err)
 				err = nil
 			} else if strings.Contains(err.Error(), "SQLSTATE 22003") {
-				log.Println("WARNING: " + err.Error() + "; Integer too big, message ignored")
+				log.Logger.Warn("Integer too big, message ignored", attributes.ErrorKey, err)
 				err = nil
 			} else {
 				err = errors.Join(errors.New(query), err)
@@ -205,10 +208,10 @@ func (publisher *Publisher) Publish(mixedEnvelopes []meta.Envelope, mixedTimesta
 			}
 		}
 		if publisher.debug {
-			log.Println("Postgres publishing took ", time.Since(start))
+			log.Logger.Debug("Postgres publishing took", "duration", time.Since(start))
 		}
 		if slowProducerTimeout > 0 && time.Since(start) >= slowProducerTimeout {
-			log.Println("WARNING: finished slow timescale publisher call", time.Since(start), deviceId, service.Id)
+			log.Logger.Warn("finished slow timescale publisher call", "duration", time.Since(start), "device_id", deviceId, "service_id", service.Id)
 		}
 	}
 	return err
@@ -243,7 +246,7 @@ func flatten(deviceId string, m map[string]interface{}, fieldNames []string, pre
 				for i, nv := range child {
 					subChild, ok := nv.(map[string]interface{})
 					if !ok {
-						log.Printf("list element is not map: %v, ignoring field %s of device %s\n", nv, name, deviceId)
+						log.Logger.Warn("list element is not map, ignoring field", "field", name, "device_id", deviceId, "element", nv)
 						continue
 					}
 					nm, err := flatten(deviceId, subChild, fieldNames, name)
