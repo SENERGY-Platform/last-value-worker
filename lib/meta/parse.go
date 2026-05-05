@@ -17,6 +17,7 @@
 package meta
 
 import (
+	util "github.com/SENERGY-Platform/timescale-tableworker/pkg/lib/handler"
 	"sort"
 )
 
@@ -27,15 +28,16 @@ func ParseContentVariable(c ContentVariable, path string) []string {
 		prefix += "."
 	}
 	prefix += c.Name
+	fieldName := util.HashFieldNameIfNeeded(prefix)
 	switch c.Type {
 	case String:
-		s = append(s, prefix)
+		s = append(s, fieldName)
 	case Boolean:
-		s = append(s, prefix)
+		s = append(s, fieldName)
 	case Float:
-		s = append(s, prefix)
+		s = append(s, fieldName)
 	case Integer:
-		s = append(s, prefix)
+		s = append(s, fieldName)
 	case Structure:
 		sort.SliceStable(c.SubContentVariables, func(i, j int) bool { // guarantees same results for different orders
 			return c.SubContentVariables[i].Id < c.SubContentVariables[j].Id
@@ -45,7 +47,7 @@ func ParseContentVariable(c ContentVariable, path string) []string {
 		}
 	case List:
 		if len(c.SubContentVariables) > 0 && c.SubContentVariables[0].Name == "*" {
-			s = append(s, prefix)
+			s = append(s, fieldName)
 		} else {
 			for _, sub := range c.SubContentVariables {
 				s = append(s, ParseContentVariable(sub, prefix)...)

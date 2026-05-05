@@ -186,8 +186,8 @@ func (publisher *Publisher) Publish(mixedEnvelopes []meta.Envelope, mixedTimesta
 		if len(rows) == 0 {
 			return nil
 		}
-		query := "INSERT INTO \"" + table + "\" (\""
-		query += strings.Join(fieldNames, "\", \"") + "\") VALUES " + strings.Join(rows, ", ") + ";"
+		query := "INSERT INTO \"" + table + "\" ("
+		query += strings.Join(fieldNames, ", ") + ") VALUES " + strings.Join(rows, ", ") + ";"
 		if publisher.debug {
 			log.Logger.Debug("Executing query", "query", query)
 		}

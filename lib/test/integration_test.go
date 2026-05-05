@@ -197,6 +197,14 @@ func TestIntegration(t *testing.T) {
 									Type: models.Integer,
 								},
 								{
+									Name:                 "thisisatestforveryveryveryveryveryverylongfieldnameswhichneedtobehashed",
+									Type:                 models.Integer,
+									CharacteristicId:     "urn:infai:ses:characteristic:a49a48fc-3a2c-4149-ac7f-1a5482d4c6e1",
+									FunctionId:           "urn:infai:ses:measuring-function:f2769eb9-b6ad-4f7e-bd28-e4ea043d2f8b",
+									AspectId:             "urn:infai:ses:aspect:a14c5efb-b0b6-46c3-982e-9fded75b5ab6",
+									SerializationOptions: []string{models.SerializationOptionXmlAttribute},
+								},
+								{
 									Name:          "level_unit",
 									Type:          models.String,
 									UnitReference: "level",
@@ -314,7 +322,7 @@ func TestIntegration(t *testing.T) {
 	envelope := meta.Envelope{
 		DeviceId:  d.Id,
 		ServiceId: dt.Services[0].Id,
-		Value:     map[string]interface{}{"metrics": map[string]interface{}{"level": 42, "level_unit": "test2", "title": "event", "updateTime": 13, "listvariable": []map[string]interface{}{{"value": 12, "value2": 34}, {"value": 56, "value2": 78}, {"value": 90, "value2": 12}}, "listfixed": []map[string]interface{}{{"value": 12, "value2": 34}, {"value": 56, "value2": 78}}}, "other_var": "foo"},
+		Value:     map[string]interface{}{"metrics": map[string]interface{}{"level": 42, "level_unit": "test2", "thisisatestforveryveryveryveryveryverylongfieldnameswhichneedtobehashed": 42, "title": "event", "updateTime": 13, "listvariable": []map[string]interface{}{{"value": 12, "value2": 34}, {"value": 56, "value2": 78}, {"value": 90, "value2": 12}}, "listfixed": []map[string]interface{}{{"value": 12, "value2": 34}, {"value": 56, "value2": 78}}}, "other_var": "foo"},
 	}
 	msg, err := json.Marshal(envelope)
 	if err != nil {
@@ -379,7 +387,7 @@ func TestIntegration(t *testing.T) {
 		return
 	}
 
-	if !strings.Contains(string(item.Value), `"value":{"metrics":{"level":42,"level_unit":"test2","listfixed":[{"value":12,"value2":34},{"value":56,"value2":78}],"listvariable":[{"value":12,"value2":34},{"value":56,"value2":78},{"value":90,"value2":12}],"title":"event","updateTime":13},"other_var":"foo"}}`) {
+	if !strings.Contains(string(item.Value), `"value":{"metrics":{"level":42,"level_unit":"test2","listfixed":[{"value":12,"value2":34},{"value":56,"value2":78}],"listvariable":[{"value":12,"value2":34},{"value":56,"value2":78},{"value":90,"value2":12}],"thisisatestforveryveryveryveryveryverylongfieldnameswhichneedtobehashed":42,"title":"event","updateTime":13},"other_var":"foo"}}`) {
 		t.Error(string(item.Value))
 	}
 
@@ -404,6 +412,11 @@ func TestIntegration(t *testing.T) {
 			"deviceId":   d.Id,
 			"serviceId":  dt.Services[0].Id,
 		},
+		{
+			"columnName": "metrics.thisisatestforveryveryveryveryveryverylongfieldnameswhichneedtobehashed",
+			"deviceId":   d.Id,
+			"serviceId":  dt.Services[0].Id,
+		},
 	})
 	if err != nil {
 		t.Error(err)
@@ -411,7 +424,7 @@ func TestIntegration(t *testing.T) {
 	}
 
 	normalizedResponse := normalizeLastValueResp(lastValueResp)
-	normalizedRequest := normalizeLastValueResp([]map[string]interface{}{{"value": 42.0}, {"value": "foo"}, {"value": []interface{}{map[string]interface{}{"value": 12.0, "value2": 34.0}, map[string]interface{}{"value": 56.0, "value2": 78.0}, map[string]interface{}{"value": 90.0, "value2": 12.0}}}, {"value": 56.0}})
+	normalizedRequest := normalizeLastValueResp([]map[string]interface{}{{"value": 42.0}, {"value": "foo"}, {"value": []interface{}{map[string]interface{}{"value": 12.0, "value2": 34.0}, map[string]interface{}{"value": 56.0, "value2": 78.0}, map[string]interface{}{"value": 90.0, "value2": 12.0}}}, {"value": 56.0}, {"value": 42.0}})
 	if !reflect.DeepEqual(normalizedResponse, normalizedRequest) {
 		t.Errorf("%#v", lastValueResp)
 		return

@@ -32,7 +32,7 @@ func Timescalewrapper(ctx context.Context, wg *sync.WaitGroup, postgresHost stri
 	log.Logger.Info("start timescalewrapper")
 	c, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
 		ContainerRequest: testcontainers.ContainerRequest{
-			Image:           "ghcr.io/senergy-platform/timescale-wrapper:dev",
+			Image:           "ghcr.io/senergy-platform/timescale-wrapper:v0.0.62",
 			AlwaysPullImage: true,
 			Env: map[string]string{
 				"POSTGRES_PW":     postgresPw,

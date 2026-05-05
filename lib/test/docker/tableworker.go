@@ -31,7 +31,7 @@ func Tableworker(ctx context.Context, wg *sync.WaitGroup, postgresHost string, p
 	log.Logger.Info("start tableworker")
 	c, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
 		ContainerRequest: testcontainers.ContainerRequest{
-			Image:           "ghcr.io/senergy-platform/timescale-tableworker:dev",
+			Image:           "ghcr.io/senergy-platform/timescale-tableworker:v0.0.34",
 			AlwaysPullImage: true,
 			Env: map[string]string{
 				"POSTGRES_PW":                 postgresPw,
