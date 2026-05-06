@@ -17,8 +17,10 @@
 package meta
 
 import (
-	util "github.com/SENERGY-Platform/timescale-tableworker/pkg/lib/handler"
 	"sort"
+	"strings"
+
+	util "github.com/SENERGY-Platform/timescale-tableworker/pkg/lib/handler"
 )
 
 func ParseContentVariable(c ContentVariable, path string) []string {
@@ -28,7 +30,7 @@ func ParseContentVariable(c ContentVariable, path string) []string {
 		prefix += "."
 	}
 	prefix += c.Name
-	fieldName := util.HashFieldNameIfNeeded(prefix)
+	fieldName := strings.ReplaceAll(util.HashFieldNameIfNeeded(prefix), "\"", "")
 	switch c.Type {
 	case String:
 		s = append(s, fieldName)
