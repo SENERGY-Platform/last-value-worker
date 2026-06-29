@@ -244,17 +244,20 @@ func flatten(deviceId string, m map[string]interface{}, fieldNames []string, pre
 				values[k] = "'" + str + "'"
 			} else {
 				for i, nv := range child {
-					subChild, ok := nv.(map[string]interface{})
-					if !ok {
-						values[k+"."+strconv.Itoa(i)] = nv
+					subChild, isMap := nv.(map[string]interface{})
+					prefix := k
+					if !isMap {
+						subChild = map[string]interface{}{strconv.Itoa(i): nv}
 					} else {
-						nm, err := flatten(deviceId, subChild, fieldNames, name)
-						if err != nil {
-							return nil, err
-						}
-						for nk, nv := range nm {
-							values[k+"."+strconv.Itoa(i)+"."+nk] = nv
-						}
+						// if the child is a map, add the index to the prefix here
+						prefix = k + "." + strconv.Itoa(i)
+					}
+					nm, err := flatten(deviceId, subChild, fieldNames, name)
+					if err != nil {
+						return nil, err
+					}
+					for nk, nv := range nm {
+						values[prefix+"."+nk] = nv
 					}
 				}
 			}
