@@ -246,15 +246,15 @@ func flatten(deviceId string, m map[string]interface{}, fieldNames []string, pre
 				for i, nv := range child {
 					subChild, ok := nv.(map[string]interface{})
 					if !ok {
-						log.Logger.Warn("list element is not map, ignoring field", "field", name, "device_id", deviceId, "element", nv)
-						continue
-					}
-					nm, err := flatten(deviceId, subChild, fieldNames, name)
-					if err != nil {
-						return nil, err
-					}
-					for nk, nv := range nm {
-						values[k+"."+strconv.Itoa(i)+"."+nk] = nv
+						values[k+"."+strconv.Itoa(i)] = nv
+					} else {
+						nm, err := flatten(deviceId, subChild, fieldNames, name)
+						if err != nil {
+							return nil, err
+						}
+						for nk, nv := range nm {
+							values[k+"."+strconv.Itoa(i)+"."+nk] = nv
+						}
 					}
 				}
 			}
