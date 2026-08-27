@@ -50,7 +50,10 @@ func Memcached(ctx context.Context, wg *sync.WaitGroup) (hostPort string, ipAddr
 		}
 	}()
 
-	ipAddress = "host.docker.internal"
+	ipAddress, err = GetHostIp(ctx)
+	if err != nil {
+		return "", "", err
+	}
 	temp, err := c.MappedPort(ctx, "11211/tcp")
 	if err != nil {
 		return "", "", err

@@ -47,7 +47,10 @@ func Timescale(ctx context.Context, wg *sync.WaitGroup) (host string, port int, 
 	if err != nil {
 		return host, port, user, pw, db, err
 	}
-	host = "host.docker.internal"
+	host, err = GetHostIp(ctx)
+	if err != nil {
+		return host, port, user, pw, db, err
+	}
 	natPort, err := c.MappedPort(ctx, "5432/tcp")
 	if err != nil {
 		return host, port, user, pw, db, err

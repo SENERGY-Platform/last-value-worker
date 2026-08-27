@@ -95,7 +95,11 @@ func TestIntegration(t *testing.T) {
 		conf.PostgresHost, conf.PostgresPort, conf.PostgresUser, conf.PostgresPw, conf.PostgresDb = postgresHost, postgresPort, postgresUser, postgresPw, postgresDb
 	}()
 
-	hostIp := "host.docker.internal"
+	hostIp, err := docker.GetHostIp(ctx)
+	if err != nil {
+		t.Error(err)
+		return
+	}
 	permMockServ := &httptest.Server{
 		Config: &http.Server{Handler: http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 			json.NewEncoder(writer).Encode(true)

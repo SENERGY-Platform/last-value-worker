@@ -63,7 +63,10 @@ func Timescalewrapper(ctx context.Context, wg *sync.WaitGroup, postgresHost stri
 		}
 	}()
 
-	ipAddress := "host.docker.internal"
+	ipAddress, err := GetHostIp(ctx)
+	if err != nil {
+		return "", err
+	}
 	temp, err := c.MappedPort(ctx, "8080/tcp")
 	if err != nil {
 		return "", err
