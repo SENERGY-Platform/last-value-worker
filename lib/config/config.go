@@ -28,20 +28,21 @@ import (
 )
 
 type Config struct {
-	MemcachedUrls      []string `json:"memcached_urls"`
-	KafkaBootstrap     string   `json:"kafka_bootstrap"`
-	GroupId            string   `json:"group_id"`
-	DeviceTypeGroupId  string   `json:"device_type_group_id"`
-	DeviceTypeTopic    string   `json:"device_type_topic"`
-	ServiceTopicPrefix string   `json:"service_topic_prefix"`
-	DeviceRepoUrl      string   `json:"device_repo_url"`
-	PostgresHost       string   `json:"postgres_host"`
-	PostgresPort       int      `json:"postgres_port"`
-	PostgresUser       string   `json:"postgres_user" config:"secret"`
-	PostgresPw         string   `json:"postgres_pw" config:"secret"`
-	PostgresDb         string   `json:"postgres_db"`
-	Debug              bool     `json:"debug"`
-	LogHandler         string   `json:"log_handler"`
+	MemcachedUrls        []string `json:"memcached_urls"`
+	KafkaBootstrap       string   `json:"kafka_bootstrap"`
+	GroupId              string   `json:"group_id"`
+	DeviceTypeGroupId    string   `json:"device_type_group_id"`
+	DeviceTypeTopic      string   `json:"device_type_topic"`
+	ServiceTopicPrefix   string   `json:"service_topic_prefix"`
+	TopicRefreshInterval string   `json:"topic_refresh_interval"`
+	DeviceRepoUrl        string   `json:"device_repo_url"`
+	PostgresHost         string   `json:"postgres_host"`
+	PostgresPort         int      `json:"postgres_port"`
+	PostgresUser         string   `json:"postgres_user" config:"secret"`
+	PostgresPw           string   `json:"postgres_pw" config:"secret"`
+	PostgresDb           string   `json:"postgres_db"`
+	Debug                bool     `json:"debug"`
+	LogHandler           string   `json:"log_handler"`
 }
 
 // loads config from json in location and used environment variables (e.g ZookeeperUrl --> ZOOKEEPER_URL)

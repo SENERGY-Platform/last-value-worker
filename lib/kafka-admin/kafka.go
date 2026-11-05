@@ -38,6 +38,7 @@ func (ka *KafkaAdmin) ListTopics() ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer adm.Close()
 	topics, err := adm.ListTopics()
 	if err != nil {
 		return nil, err

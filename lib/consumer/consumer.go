@@ -66,6 +66,12 @@ func (this *Consumer) start() error {
 	}
 
 	go func() {
+		// leaves the group right away instead of after the session timeout, so a replacing consumer gets its partitions without waiting
+		defer func() {
+			if err := client.Close(); err != nil {
+				log.Logger.Error("closing kafka consumer group failed", "group_id", this.groupId, attributes.ErrorKey, err)
+			}
+		}()
 		for {
 			select {
 			case <-this.ctx.Done():
@@ -73,6 +79,10 @@ func (this *Consumer) start() error {
 				return
 			default:
 				if err := client.Consume(this.ctx, this.topics, this); err != nil {
+					// sarama returns ctx.Err() when the consumer is cancelled while joining the group
+					if this.ctx.Err() != nil {
+						return
+					}
 					log.Logger.Error("Error from consumer", attributes.ErrorKey, err)
 					panic(err)
 				}

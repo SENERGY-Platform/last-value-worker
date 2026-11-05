@@ -59,6 +59,7 @@ func TestIntegration(t *testing.T) {
 		return
 	}
 	conf.Debug = true
+	conf.TopicRefreshInterval = "1s"
 
 	wg2 := sync.WaitGroup{}
 	mux := sync.Mutex{}
@@ -344,7 +345,24 @@ func TestIntegration(t *testing.T) {
 	}
 	d.GenerateId()
 
-	//send envelope before creating device/device-type to ensure the service topic exists and can be found by (wd *Manager) newConsumer()
+	err = createDeviceType(conf, dt)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	time.Sleep(2 * time.Second)
+
+	err = createDevice(conf, d)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	time.Sleep(10 * time.Second)
+
+	// The service topic does not exist yet. This single event auto-creates it after the last device type update,
+	// so the worker has to discover the topic on its own and read it from the beginning.
 	envelope := meta.Envelope{
 		DeviceId:  d.Id,
 		ServiceId: dt.Services[0].Id,
@@ -367,34 +385,6 @@ func TestIntegration(t *testing.T) {
 		return
 	}
 
-	_, _, err = producer.SendMessage(&sarama.ProducerMessage{
-		Topic: serviceIdToTopic(envelope.ServiceId),
-		Value: sarama.ByteEncoder(msg),
-	})
-	if err != nil {
-		t.Error(err)
-		return
-	}
-
-	time.Sleep(2 * time.Second)
-
-	err = createDeviceType(conf, dt)
-	if err != nil {
-		t.Error(err)
-		return
-	}
-
-	time.Sleep(2 * time.Second)
-
-	err = createDevice(conf, d)
-	if err != nil {
-		t.Error(err)
-		return
-	}
-
-	time.Sleep(10 * time.Second)
-
-	//repeat produce, in case the consumer starts with the latest offset
 	_, _, err = producer.SendMessage(&sarama.ProducerMessage{
 		Topic: serviceIdToTopic(envelope.ServiceId),
 		Value: sarama.ByteEncoder(msg),

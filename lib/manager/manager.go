@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"strings"
 	"sync"
@@ -43,6 +44,7 @@ type Manager struct {
 	consumer           *consumer.Consumer
 	deviceTypeConsumer *consumer.Consumer
 	consumerCancel     context.CancelFunc
+	consumerMux        sync.Mutex
 	parentContext      context.Context
 	wg                 *sync.WaitGroup
 	kafkaAdm           *kafkaAdmin.KafkaAdmin
@@ -93,40 +95,83 @@ func New(c *config.Config, ctx context.Context, wg *sync.WaitGroup) (*Manager, e
 }
 
 func (wd *Manager) start() error {
-	err := wd.newConsumer()
+	refreshInterval, err := time.ParseDuration(wd.config.TopicRefreshInterval)
+	if err != nil {
+		return fmt.Errorf("invalid topic_refresh_interval: %w", err)
+	}
+	if refreshInterval <= 0 {
+		return errors.New("topic_refresh_interval must be positive")
+	}
+	err = wd.newConsumer()
 	if err != nil {
 		return err
 	}
 	wd.deviceTypeConsumer, err = consumer.NewConsumer(wd.parentContext, wd.wg, wd.config.KafkaBootstrap, []string{wd.config.DeviceTypeTopic},
 		wd.config.DeviceTypeGroupId, consumer.Latest, wd.consumeDeviceType, wd.errorhandlerDeviceType, wd.config.Debug)
-	return err
+	if err != nil {
+		return err
+	}
+	go wd.refreshTopics(refreshInterval)
+	return nil
 }
 
+// refreshTopics picks up service topics that appear without a device type update,
+// e.g. topics auto-created by a connector on their first event.
+func (wd *Manager) refreshTopics(interval time.Duration) {
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-wd.parentContext.Done():
+			return
+		case <-ticker.C:
+			err := wd.newConsumer()
+			if err != nil {
+				log.Logger.Error("refreshing service topics failed", attributes.ErrorKey, err)
+			}
+		}
+	}
+}
+
+// newConsumer replaces the data consumer if the set of service topics changed.
+// Partitions without a committed offset start at the oldest message, because a new
+// topic already holds the events written before it was subscribed.
 func (wd *Manager) newConsumer() error {
+	wd.consumerMux.Lock()
+	defer wd.consumerMux.Unlock()
 	allTopics, err := wd.kafkaAdm.ListTopics()
+	if err != nil {
+		return err
+	}
 	topics := []string{}
 	for _, topic := range allTopics {
 		if strings.HasPrefix(topic, wd.config.ServiceTopicPrefix) {
 			topics = append(topics, topic)
 		}
 	}
-	log.Logger.Info("Got service topics", "count", len(topics))
 	if wd.consumer != nil && meta.EqualStringSlice(wd.consumer.GetTopics(), topics) {
-		log.Logger.Info("No changes")
+		log.Logger.Debug("No changes in service topics", "count", len(topics))
 		return nil
 	}
 	if len(topics) == 0 {
 		log.Logger.Warn("No matching topics")
-		return err
+		return nil
 	}
+	log.Logger.Info("Got service topics", "count", len(topics))
 	if wd.consumerCancel != nil {
 		wd.consumerCancel()
 	}
 	ctx, cancel := context.WithCancel(wd.parentContext)
 	wd.consumerCancel = cancel
-	wd.consumer, err = consumer.NewConsumer(ctx, wd.wg, wd.config.KafkaBootstrap, topics, wd.config.GroupId, consumer.Latest,
+	c, err := consumer.NewConsumer(ctx, wd.wg, wd.config.KafkaBootstrap, topics, wd.config.GroupId, consumer.Earliest,
 		wd.consumeData, wd.errorhandlerData, wd.config.Debug)
-	return err
+	if err != nil {
+		// the previous consumer is already cancelled; forgetting the topics makes the next refresh retry
+		wd.consumer = nil
+		return err
+	}
+	wd.consumer = c
+	return nil
 }
 
 func (wd *Manager) consumeDeviceType(_ string, _ []*sarama.ConsumerMessage) error {
